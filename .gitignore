@@ -3,6 +3,7 @@
 .atl/
 openspec/
 create_trello.py
+.claude
 
 # OS
 .DS_Store
