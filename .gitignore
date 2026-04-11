@@ -1,0 +1,16 @@
+# Solo se versionan backend/ y frontend/
+*.docx
+.atl/
+openspec/
+create_trello.py
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/settings.json
+.idea/
+*.suo
+*.user
