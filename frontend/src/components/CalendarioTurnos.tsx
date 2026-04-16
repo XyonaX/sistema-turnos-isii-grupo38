@@ -1,5 +1,5 @@
 'use client';
-import { Horario } from '../types';
+import type { Horario } from '../types';
 
 interface Props {
   horarios: Horario[];

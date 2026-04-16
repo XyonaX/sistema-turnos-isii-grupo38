@@ -1,14 +1,40 @@
 import type { Metadata } from 'next';
 
+import './globals.css';
+import { AuthProvider } from '../context/AuthContext';
+
 export const metadata: Metadata = {
-  title: 'Sistema de Turnos',
-  description: 'Reservá turnos online de manera fácil y rápida',
+  title: 'TurnoFácil — Sistema de Gestión de Turnos',
+  description:
+    'Reservá turnos online de manera fácil, rápida y segura. Gestioná tu agenda sin complicaciones.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <body>{children}</body>
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem('theme');
+                  if (stored === 'dark' || stored === 'light') {
+                    document.documentElement.setAttribute('data-theme', stored);
+                  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                  } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
