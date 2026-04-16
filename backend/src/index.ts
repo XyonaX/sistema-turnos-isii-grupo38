@@ -1,19 +1,29 @@
 import 'reflect-metadata';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { AppDataSource } from './config/database';
+import { globalLimiter } from './middlewares/rateLimiter';
 import authRoutes from './routes/auth.routes';
 import turnoRoutes from './routes/turno.routes';
 import horarioRoutes from './routes/horario.routes';
 
 dotenv.config();
 
+// Validar variables de entorno requeridas al iniciar
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET no está definido en las variables de entorno');
+  process.exit(1);
+}
+
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
 
+app.use(helmet());
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
 app.use(express.json());
+app.use('/api', globalLimiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/turnos', turnoRoutes);

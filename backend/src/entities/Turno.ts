@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
-import { Usuario } from './Usuario';
+
 import { Horario } from './Horario';
+import { Usuario } from './Usuario';
 
 export enum EstadoTurno {
   PENDIENTE = 'pendiente',
@@ -13,10 +14,11 @@ export class Turno {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Usuario, (usuario) => usuario.turnos, { eager: true })
+  // eager: false — se carga explícitamente para evitar exponer passwordHash
+  @ManyToOne(() => Usuario, (usuario) => usuario.turnos, { eager: false })
   cliente!: Usuario;
 
-  @ManyToOne(() => Horario, (horario) => horario.turnos, { eager: true })
+  @ManyToOne(() => Horario, (horario) => horario.turnos, { eager: false })
   horario!: Horario;
 
   @Column({ type: 'enum', enum: EstadoTurno, default: EstadoTurno.PENDIENTE })

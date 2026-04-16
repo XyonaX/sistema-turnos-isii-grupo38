@@ -1,5 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+
 import { RolUsuario } from '../entities/Usuario';
 
 export interface AuthRequest extends Request {
@@ -15,7 +16,9 @@ export const isAuthenticated = (req: AuthRequest, res: Response, next: NextFunct
   const token = authHeader.split(' ')[1];
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET || 'secret') as {
-      id: string; email: string; rol: RolUsuario;
+      id: string;
+      email: string;
+      rol: RolUsuario;
     };
     req.user = payload;
     next();

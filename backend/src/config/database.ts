@@ -1,8 +1,9 @@
-import { DataSource } from 'typeorm';
-import { Usuario } from '../entities/Usuario';
-import { Turno } from '../entities/Turno';
-import { Horario } from '../entities/Horario';
 import dotenv from 'dotenv';
+import { DataSource } from 'typeorm';
+
+import { Horario } from '../entities/Horario';
+import { Turno } from '../entities/Turno';
+import { Usuario } from '../entities/Usuario';
 dotenv.config();
 
 export const AppDataSource = new DataSource({

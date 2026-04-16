@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+
 import { AppDataSource } from '../config/database';
 import { Usuario, RolUsuario } from '../entities/Usuario';
 
@@ -21,8 +22,8 @@ export class AuthService {
     if (!valid) throw new Error('Credenciales inválidas');
     return jwt.sign(
       { id: usuario.id, email: usuario.email, rol: usuario.rol },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      process.env.JWT_SECRET as string,
+      { expiresIn: (process.env.JWT_EXPIRES_IN ?? '24h') as jwt.SignOptions['expiresIn'] }
     );
   }
 }
