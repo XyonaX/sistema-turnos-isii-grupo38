@@ -6,17 +6,20 @@ import { authService } from '../services/authService';
 interface AuthUser {
   nombre: string;
   email: string;
+  rol?: string;
 }
 
 interface AuthContextValue {
   isAuthenticated: boolean;
   user: AuthUser | null;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   isAuthenticated: false,
   user: null,
+  login: async () => {},
   logout: () => {},
 });
 
@@ -36,10 +39,16 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
+  // Función para actualizar el estado basado en localStorage
+  const updateAuthState = () => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) {
+      setIsAuthenticated(false);
+      setUser(null);
+      return;
+    }
 
     setIsAuthenticated(true);
 
@@ -53,28 +62,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             : '';
       const email =
         typeof payload['email'] === 'string' ? payload['email'] : '';
-      setUser({ nombre, email });
+      const rol =
+        typeof payload['rol'] === 'string' ? payload['rol'] : 'usuario';
+      setUser({ nombre, email, rol });
+    } else {
+      // Si el token no es válido, limpiar
+      setIsAuthenticated(false);
+      setUser(null);
     }
+  };
 
-    // Also check localStorage for stored user info (set by authService.login)
-    const storedNombre = localStorage.getItem('user_nombre');
-    const storedEmail = localStorage.getItem('user_email');
-    if (storedNombre || storedEmail) {
-      setUser({
-        nombre: storedNombre ?? '',
-        email: storedEmail ?? '',
-      });
-    }
+  useEffect(() => {
+    // Actualizar estado inicial
+    updateAuthState();
+    setMounted(true);
+
+    // Escuchar cambios de localStorage (de otra pestaña)
+    const handleStorageChange = () => {
+      updateAuthState();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  const login = async (email: string, password: string) => {
+    const response = await authService.login(email, password);
+    setIsAuthenticated(true);
+    
+    // Decodificar el token y extraer el usuario
+    const token = localStorage.getItem('token');
+    if (token) {
+      const payload = decodeJwtPayload(token);
+      if (payload) {
+        const nombre =
+          typeof payload['nombre'] === 'string'
+            ? payload['nombre']
+            : typeof payload['name'] === 'string'
+              ? payload['name']
+              : '';
+        const userEmail =
+          typeof payload['email'] === 'string' ? payload['email'] : '';
+        const rol =
+          typeof payload['rol'] === 'string' ? payload['rol'] : 'usuario';
+        setUser({ nombre, email: userEmail, rol });
+      }
+    }
+  };
 
   const logout = () => {
     authService.logout();
+    // Actualizar el estado inmediatamente
     setIsAuthenticated(false);
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

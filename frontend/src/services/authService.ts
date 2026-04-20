@@ -1,45 +1,85 @@
-import type { AuthResponse, Usuario } from '../types';
+'use client';
+
 import api from './api';
 
+interface LoginResponse {
+  token: string;
+  user: {
+    id: string;
+    nombre: string;
+    email: string;
+    rol?: string;
+  };
+}
+
 export const authService = {
-  async register(nombre: string, email: string, password: string): Promise<Usuario> {
-    const { data } = await api.post<Usuario>('/auth/register', { nombre, email, password });
-    return data;
-  },
-
   async login(email: string, password: string): Promise<string> {
-    const { data } = await api.post<AuthResponse>('/auth/login', { email, password });
-    localStorage.setItem('token', data.token);
-
-    // Decodificar el JWT payload y almacenar información del usuario para AuthContext
     try {
-      const parts = data.token.split('.');
-      if (parts.length === 3) {
-        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
-        const payload = JSON.parse(atob(padded)) as Record<string, unknown>;
-        const nombre =
-          typeof payload['nombre'] === 'string'
-            ? payload['nombre']
-            : typeof payload['name'] === 'string'
-              ? payload['name']
-              : email;
-        const userEmail = typeof payload['email'] === 'string' ? payload['email'] : email;
-        localStorage.setItem('user_nombre', nombre);
-        localStorage.setItem('user_email', userEmail);
-      }
-    } catch {
-      // si la decodificación falla, almacenar email como fallback
-      localStorage.setItem('user_nombre', email);
-      localStorage.setItem('user_email', email);
-    }
+      const response = await api.post<LoginResponse>('/auth/login', {
+        email,
+        password,
+      });
 
-    return data.token;
+      const { token } = response.data;
+      localStorage.setItem('token', token);
+
+      // Guardar info del usuario si está disponible
+      if (response.data.user) {
+        localStorage.setItem('user_nombre', response.data.user.nombre);
+        localStorage.setItem('user_email', response.data.user.email);
+        localStorage.setItem('user_rol', response.data.user.rol || 'usuario');
+      }
+
+      return token;
+    } catch (error) {
+      throw error;
+    }
   },
 
-  logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user_nombre');
-    localStorage.removeItem('user_email');
+  async register(
+    nombre: string,
+    email: string,
+    password: string
+  ): Promise<string> {
+    try {
+      const response = await api.post<LoginResponse>('/auth/register', {
+        nombre,
+        email,
+        password,
+      });
+
+      const { token } = response.data;
+      localStorage.setItem('token', token);
+
+      if (response.data.user) {
+        localStorage.setItem('user_nombre', response.data.user.nombre);
+        localStorage.setItem('user_email', response.data.user.email);
+        localStorage.setItem('user_rol', response.data.user.rol || 'usuario');
+      }
+
+      return token;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  logout(): void {
+    try {
+      // Intentar notificar al backend
+      api.post('/auth/logout').catch(() => {
+        // Ignorar errores del backend al logout
+      });
+    } finally {
+      // Siempre limpiar localStorage sin importar la respuesta del servidor
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_nombre');
+      localStorage.removeItem('user_rol');
+      localStorage.removeItem('user_email');
+    }
+  },
+
+  getToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('token');
   },
 };
