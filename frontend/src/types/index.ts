@@ -21,7 +21,7 @@ export interface Turno {
   horario: Horario;
   estado: EstadoTurno;
   notas?: string;
-  creadoEn: string;
+  creadoEn: string | Date;
 }
 
 export interface AuthResponse {

@@ -12,11 +12,15 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css}\""
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
     "axios": "^1.6.2",
-    "next": "^16.2.3",
+    "next": "^15.5.15",
+    "postcss": "^8.4.35",
     "react": "^19.2.5",
     "react-calendar": "^4.8.0",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "react-hook-form": "^7.72.1",
+    "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -24,6 +28,7 @@
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@typescript-eslint/parser": "^8.58.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.3",
     "eslint-config-prettier": "^10.1.8",

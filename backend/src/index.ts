@@ -6,6 +6,7 @@ import { AppDataSource } from './config/database';
 import authRoutes from './routes/auth.routes';
 import turnoRoutes from './routes/turno.routes';
 import horarioRoutes from './routes/horario.routes';
+import setupRoutes from './routes/setup.routes';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/setup', setupRoutes);
 app.use('/api/turnos', turnoRoutes);
 app.use('/api/horarios', horarioRoutes);
 
