@@ -41,18 +41,14 @@ export function Footer() {
         <div className={styles.footerTop}>
           <div className={styles.footerBrand}>
             <div className={styles.footerBrandName}>
-              <span
-                className={styles.navLogo}
-                style={{ width: 32, height: 32 }}
-                aria-hidden="true"
-              >
+              <span className={styles.navLogo} style={{ width: 32, height: 32 }} aria-hidden="true">
                 <IconLogo size={18} />
               </span>
               Turno<span>Fácil</span>
             </div>
             <p className={styles.footerBrandDesc}>
-              Sistema de gestión de turnos diseñado para simplificar la reserva y administración
-              de citas. Proyecto ISII — Grupo 38.
+              Sistema de gestión de turnos diseñado para simplificar la reserva y administración de
+              citas. Proyecto ISII — Grupo 38.
             </p>
           </div>
 
@@ -66,7 +62,7 @@ export function Footer() {
                 <Link href="/register">Registrarse</Link>
               </li>
               <li>
-                <Link href="/disponibilidad">Ver disponibilidad</Link>
+                <Link href="/mis-turnos">Ver disponibilidad</Link>
               </li>
               <li>
                 <Link href="/mis-turnos">Mis turnos</Link>

@@ -4,6 +4,11 @@ import { DataSource } from 'typeorm';
 import { Horario } from '../entities/Horario';
 import { Turno } from '../entities/Turno';
 import { Usuario } from '../entities/Usuario';
+import { Rol } from '../entities/Rol';
+import { Servicio } from '../entities/Servicio';
+import { FranjaHoraria } from '../entities/FranjaHoraria';
+import { Notificacion } from '../entities/Notificacion';
+
 dotenv.config();
 
 export const AppDataSource = new DataSource({
@@ -15,7 +20,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_DATABASE || 'sistema_turnos',
   synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
-  entities: [Usuario, Turno, Horario],
+  entities: [Usuario, Turno, Horario, Rol, Servicio, FranjaHoraria, Notificacion],
   migrations: ['src/migrations/*.ts'],
   subscribers: [],
 });

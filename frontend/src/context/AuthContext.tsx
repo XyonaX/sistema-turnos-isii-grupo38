@@ -1,9 +1,13 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+
 import { authService } from '../services/authService';
 
 interface AuthUser {
+  id: string;
   nombre: string;
   email: string;
   rol?: string;
@@ -37,6 +41,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -54,17 +59,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const payload = decodeJwtPayload(token);
     if (payload) {
+      const id = typeof payload['id'] === 'string' ? payload['id'] : '';
       const nombre =
         typeof payload['nombre'] === 'string'
           ? payload['nombre']
           : typeof payload['name'] === 'string'
             ? payload['name']
             : '';
-      const email =
-        typeof payload['email'] === 'string' ? payload['email'] : '';
-      const rol =
-        typeof payload['rol'] === 'string' ? payload['rol'] : 'usuario';
-      setUser({ nombre, email, rol });
+      const email = typeof payload['email'] === 'string' ? payload['email'] : '';
+      const rol = typeof payload['rol'] === 'string' ? payload['rol'] : 'cliente';
+      setUser({ id, nombre, email, rol });
     } else {
       // Si el token no es válido, limpiar
       setIsAuthenticated(false);
@@ -89,23 +93,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const response = await authService.login(email, password);
     setIsAuthenticated(true);
-    
+
     // Decodificar el token y extraer el usuario
     const token = localStorage.getItem('token');
     if (token) {
       const payload = decodeJwtPayload(token);
       if (payload) {
+        const id = typeof payload['id'] === 'string' ? payload['id'] : '';
         const nombre =
           typeof payload['nombre'] === 'string'
             ? payload['nombre']
             : typeof payload['name'] === 'string'
               ? payload['name']
               : '';
-        const userEmail =
-          typeof payload['email'] === 'string' ? payload['email'] : '';
-        const rol =
-          typeof payload['rol'] === 'string' ? payload['rol'] : 'usuario';
-        setUser({ nombre, email: userEmail, rol });
+        const userEmail = typeof payload['email'] === 'string' ? payload['email'] : '';
+        const rol = typeof payload['rol'] === 'string' ? payload['rol'] : 'cliente';
+        setUser({ id, nombre, email: userEmail, rol });
       }
     }
   };
@@ -115,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Actualizar el estado inmediatamente
     setIsAuthenticated(false);
     setUser(null);
+    router.push('/');
   };
 
   return (

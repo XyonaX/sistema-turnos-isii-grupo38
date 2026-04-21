@@ -1,12 +1,22 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
-
-import { Horario } from './Horario';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToOne,
+  OneToMany,
+  CreateDateColumn,
+  JoinColumn,
+} from 'typeorm';
 import { Usuario } from './Usuario';
+import { FranjaHoraria } from './FranjaHoraria';
+import { Notificacion } from './Notificacion';
 
 export enum EstadoTurno {
   PENDIENTE = 'pendiente',
   CONFIRMADO = 'confirmado',
   CANCELADO = 'cancelado',
+  COMPLETADO = 'completado',
 }
 
 @Entity('turnos')
@@ -16,10 +26,12 @@ export class Turno {
 
   // eager: false — se carga explícitamente para evitar exponer passwordHash
   @ManyToOne(() => Usuario, (usuario) => usuario.turnos, { eager: false })
+  @JoinColumn({ name: 'clienteId' })
   cliente!: Usuario;
 
-  @ManyToOne(() => Horario, (horario) => horario.turnos, { eager: false })
-  horario!: Horario;
+  @OneToOne(() => FranjaHoraria, (franja) => franja.turno, { eager: false, nullable: true })
+  @JoinColumn({ name: 'franjaId' })
+  franja?: FranjaHoraria | null;
 
   @Column({ type: 'enum', enum: EstadoTurno, default: EstadoTurno.PENDIENTE })
   estado!: EstadoTurno;
@@ -29,4 +41,7 @@ export class Turno {
 
   @CreateDateColumn()
   creadoEn!: Date;
+
+  @OneToMany(() => Notificacion, (notificacion) => notificacion.turno)
+  notificaciones!: Notificacion[];
 }

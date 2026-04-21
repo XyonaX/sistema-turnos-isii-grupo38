@@ -213,7 +213,7 @@ export default function Home() {
                 Empezar gratis
                 <IconArrow size={18} />
               </Link>
-              <Link href="/disponibilidad" className={styles.btnSecondary}>
+              <Link href="/mis-turnos" className={styles.btnSecondary}>
                 Ver disponibilidad
                 <IconCalendar size={18} />
               </Link>

@@ -1,14 +1,15 @@
-import { Response } from 'express';
+import type { Response } from 'express';
+
+import type { AuthRequest } from '../middlewares/AuthMiddleware';
 import { TurnoService } from '../services/TurnoService';
-import { AuthRequest } from '../middlewares/AuthMiddleware';
 
 export class TurnoController {
   private turnoService = new TurnoService();
 
   reservar = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { horarioId, notas } = req.body;
-      const turno = await this.turnoService.reservar(req.user!.id, horarioId, notas);
+      const { franjaId, notas } = req.body;
+      const turno = await this.turnoService.reservar(req.user!.id, franjaId, notas);
       res.status(201).json(turno);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -48,6 +49,24 @@ export class TurnoController {
       res.json(turno);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  };
+
+  cancelarProfesional = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const turno = await this.turnoService.cancelarProfesional(req.params.id, req.user!.id);
+      res.json(turno);
+    } catch (error: any) {
+      res.status(error.message.includes('permiso') ? 403 : 400).json({ message: error.message });
+    }
+  };
+
+  getTurnosProfesional = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const turnos = await this.turnoService.getTurnosByProfesional(req.user!.id);
+      res.json(turnos);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   };
 }

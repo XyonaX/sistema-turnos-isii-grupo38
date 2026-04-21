@@ -23,17 +23,17 @@ export default function RegisterPage() {
   useEffect(() => {
     // Verificar directamente localStorage para detectar logout
     const token = localStorage.getItem('token');
-    
+
     // Si no hay token pero el contexto dice que está autenticado, actualizar página
     if (!token && isAuthenticated) {
       router.refresh();
       return;
     }
-    
+
     // Si hay token y está autenticado, redirigir
     if (token && isAuthenticated && user) {
       if (user.rol === 'admin') {
-        router.replace('/disponibilidad');
+        router.replace('/admin');
       } else {
         router.replace('/mis-turnos');
       }
@@ -50,7 +50,7 @@ export default function RegisterPage() {
     setServerError('');
     try {
       await authService.register(data.nombre, data.email, data.password);
-      
+
       // Esperar a que el estado se actualice para obtener el rol
       setTimeout(() => {
         const token = localStorage.getItem('token');
@@ -60,9 +60,9 @@ export default function RegisterPage() {
             const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
             const payload = JSON.parse(atob(padded)) as any;
             const rol = payload.rol;
-            
+
             if (rol === 'admin') {
-              router.push('/disponibilidad');
+              router.push('/admin');
             } else {
               router.push('/mis-turnos');
             }

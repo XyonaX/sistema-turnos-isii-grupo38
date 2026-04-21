@@ -21,17 +21,17 @@ export default function LoginPage() {
   useEffect(() => {
     // Verificar directamente localStorage para detectar logout
     const token = localStorage.getItem('token');
-    
+
     // Si no hay token pero el contexto dice que está autenticado, actualizar página
     if (!token && isAuthenticated) {
       router.refresh();
       return;
     }
-    
+
     // Si hay token y está autenticado, redirigir
     if (token && isAuthenticated && user) {
       if (user.rol === 'admin') {
-        router.replace('/disponibilidad');
+        router.replace('/admin');
       } else {
         router.replace('/mis-turnos');
       }
@@ -48,7 +48,7 @@ export default function LoginPage() {
     setServerError('');
     try {
       await login(data.email, data.password);
-      
+
       // Esperar a que el estado se actualice para obtener el rol
       setTimeout(() => {
         const token = localStorage.getItem('token');
@@ -58,9 +58,9 @@ export default function LoginPage() {
             const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
             const payload = JSON.parse(atob(padded)) as any;
             const rol = payload.rol;
-            
+
             if (rol === 'admin') {
-              router.push('/disponibilidad');
+              router.push('/admin');
             } else {
               router.push('/mis-turnos');
             }
@@ -113,7 +113,10 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
             <div className="flex flex-col">
-              <label htmlFor="email" className="text-sm font-medium text-[var(--text-secondary)] mb-1.5">
+              <label
+                htmlFor="email"
+                className="text-sm font-medium text-[var(--text-secondary)] mb-1.5"
+              >
                 Email
               </label>
               <input
@@ -134,11 +137,16 @@ export default function LoginPage() {
                   },
                 })}
               />
-              {errors.email && <p className="mt-1.5 text-xs text-red-500">{errors.email.message}</p>}
+              {errors.email && (
+                <p className="mt-1.5 text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col">
-              <label htmlFor="password" className="text-sm font-medium text-[var(--text-secondary)] mb-1.5">
+              <label
+                htmlFor="password"
+                className="text-sm font-medium text-[var(--text-secondary)] mb-1.5"
+              >
                 Contrasena
               </label>
               <input
@@ -153,7 +161,9 @@ export default function LoginPage() {
                 }`}
                 {...register('password', { required: 'La contrasena es obligatoria' })}
               />
-              {errors.password && <p className="mt-1.5 text-xs text-red-500">{errors.password.message}</p>}
+              {errors.password && (
+                <p className="mt-1.5 text-xs text-red-500">{errors.password.message}</p>
+              )}
             </div>
 
             <button
@@ -168,7 +178,10 @@ export default function LoginPage() {
 
           <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
             No tenes cuenta?{' '}
-            <Link href="/register" className="font-semibold text-[var(--primary)] hover:text-[var(--primary-light)] transition-colors duration-150">
+            <Link
+              href="/register"
+              className="font-semibold text-[var(--primary)] hover:text-[var(--primary-light)] transition-colors duration-150"
+            >
               Registrate
             </Link>
           </p>

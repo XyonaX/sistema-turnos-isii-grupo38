@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 
 import './globals.css';
-import { AuthProvider } from '../context/AuthContext';
 import { Footer } from '../components/Footer';
+import { Navbar } from '../components/Navbar';
+import { AuthProvider } from '../context/AuthContext';
 
 export const metadata: Metadata = {
   title: 'TurnoFácil — Sistema de Gestión de Turnos',
@@ -35,9 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="flex flex-col min-h-screen">
         <AuthProvider>
-          <main className="flex-grow">
-            {children}
-          </main>
+          <main className="flex-grow">{children}</main>
           <Footer />
         </AuthProvider>
       </body>

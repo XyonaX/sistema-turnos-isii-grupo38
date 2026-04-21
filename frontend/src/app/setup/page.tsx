@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { api } from '@/services/api';
 
+import api from '@/services/api';
 export default function SetupPage() {
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -59,16 +59,17 @@ export default function SetupPage() {
         window.location.href = '/login';
       }, 2000);
     } catch (err: any) {
-      setError(
-        err.response?.data?.message || 'Error al crear el administrador'
-      );
+      setError(err.response?.data?.message || 'Error al crear el administrador');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ backgroundColor: 'var(--bg)' }}
+    >
       <div
         className="w-full max-w-md rounded-lg shadow-lg p-8"
         style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
@@ -81,7 +82,10 @@ export default function SetupPage() {
         </p>
 
         {success ? (
-          <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgb(34, 197, 94)' }} className="border">
+          <div
+            className="p-4 rounded-lg border"
+            style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgb(34, 197, 94)' }}
+          >
             <p style={{ color: 'rgb(34, 197, 94)' }} className="font-semibold">
               {message}
             </p>
@@ -186,7 +190,10 @@ export default function SetupPage() {
             {error && (
               <div
                 className="p-3 rounded-lg border"
-                style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgb(239, 68, 68)' }}
+                style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  borderColor: 'rgb(239, 68, 68)',
+                }}
               >
                 <p style={{ color: 'rgb(239, 68, 68)' }} className="text-sm font-medium">
                   ❌ {error}
@@ -209,7 +216,8 @@ export default function SetupPage() {
         )}
 
         <p className="text-sm text-center mt-6" style={{ color: 'var(--text-muted)' }}>
-          Esta página solo funciona una sola vez<br />
+          Esta página solo funciona una sola vez
+          <br />
           (cuando no existe administrador en el sistema)
         </p>
       </div>

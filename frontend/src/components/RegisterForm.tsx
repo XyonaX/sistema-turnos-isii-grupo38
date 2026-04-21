@@ -11,7 +11,11 @@ interface RegisterFormData {
   password: string;
 }
 
-export function RegisterForm({ onSwitch }: { onSwitch: (mode: 'home' | 'login' | 'register') => void }) {
+export function RegisterForm({
+  onSwitch,
+}: {
+  onSwitch: (mode: 'home' | 'login' | 'register') => void;
+}) {
   const router = useRouter();
   const [serverError, setServerError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -28,7 +32,7 @@ export function RegisterForm({ onSwitch }: { onSwitch: (mode: 'home' | 'login' |
     try {
       await authService.register(data.nombre, data.email, data.password);
       setSuccessMessage('Registro exitoso. Redirigiendo...');
-      
+
       // Pequeño delay para que se guarden los datos en localStorage
       setTimeout(() => {
         const token = localStorage.getItem('token');
@@ -38,9 +42,9 @@ export function RegisterForm({ onSwitch }: { onSwitch: (mode: 'home' | 'login' |
             const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
             const payload = JSON.parse(atob(padded)) as any;
             const rol = payload.rol;
-            
+
             if (rol === 'admin') {
-              router.push('/disponibilidad');
+              router.push('/admin');
             } else {
               router.push('/mis-turnos');
             }
@@ -119,9 +123,7 @@ export function RegisterForm({ onSwitch }: { onSwitch: (mode: 'home' | 'login' |
               minLength: { value: 2, message: 'Debe tener al menos 2 caracteres' },
             })}
           />
-          {errors.nombre && (
-            <p className="mt-1.5 text-xs text-red-500">{errors.nombre.message}</p>
-          )}
+          {errors.nombre && <p className="mt-1.5 text-xs text-red-500">{errors.nombre.message}</p>}
         </div>
 
         <div className="flex flex-col">
@@ -149,9 +151,7 @@ export function RegisterForm({ onSwitch }: { onSwitch: (mode: 'home' | 'login' |
               },
             })}
           />
-          {errors.email && (
-            <p className="mt-1.5 text-xs text-red-500">{errors.email.message}</p>
-          )}
+          {errors.email && <p className="mt-1.5 text-xs text-red-500">{errors.email.message}</p>}
         </div>
 
         <div className="flex flex-col">

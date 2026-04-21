@@ -1,18 +1,24 @@
 'use client';
 import React from 'react';
-import { Horario } from '../types';
-import { formatDate, formatTime } from '../utils/dateFormat';
+import type { FranjaHoraria } from '../types';
 
 interface HorarioCardProps {
-  horario: Horario;
-  onReservar: (horarioId: string) => Promise<void>;
+  horario: FranjaHoraria;
+  onReservar: (franjaId: string) => Promise<void>;
   loading?: boolean;
   isAdmin?: boolean;
   onCancelar?: (horarioId: string) => Promise<void>;
   cancelarLoading?: boolean;
 }
 
-export function HorarioCard({ horario, onReservar, loading = false, isAdmin = false, onCancelar, cancelarLoading = false }: HorarioCardProps) {
+export function HorarioCard({
+  horario,
+  onReservar,
+  loading = false,
+  isAdmin = false,
+  onCancelar,
+  cancelarLoading = false,
+}: HorarioCardProps) {
   const [isReserving, setIsReserving] = React.useState(false);
   const [isCanceling, setIsCanceling] = React.useState(false);
 
@@ -27,7 +33,7 @@ export function HorarioCard({ horario, onReservar, loading = false, isAdmin = fa
 
   const handleCancelar = async () => {
     if (!onCancelar) return;
-    
+
     if (!confirm('¿Estás seguro de que deseas cancelar este horario?')) {
       return;
     }
@@ -40,7 +46,8 @@ export function HorarioCard({ horario, onReservar, loading = false, isAdmin = fa
     }
   };
 
-  const fecha = new Date(horario.fecha);
+  const fechaStr = horario.horario?.fecha ?? '';
+  const fecha = fechaStr ? new Date(fechaStr + 'T00:00:00') : new Date();
   const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'long' });
   const diaNum = fecha.getDate();
   const mes = fecha.toLocaleDateString('es-ES', { month: 'short' });
@@ -61,7 +68,11 @@ export function HorarioCard({ horario, onReservar, loading = false, isAdmin = fa
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
             <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00-.293.707l-.707.707a1 1 0 101.414 1.414L9 9.414V6z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00-.293.707l-.707.707a1 1 0 101.414 1.414L9 9.414V6z"
+                clipRule="evenodd"
+              />
             </svg>
             <span className="text-lg font-semibold text-[var(--text-primary)]">
               {horario.horaInicio} — {horario.horaFin}
@@ -113,5 +124,5 @@ export function HorarioCard({ horario, onReservar, loading = false, isAdmin = fa
 function calcularDuracion(inicio: string, fin: string): number {
   const [hI, mI] = inicio.split(':').map(Number);
   const [hF, mF] = fin.split(':').map(Number);
-  return (hF * 60 + mF) - (hI * 60 + mI);
+  return hF * 60 + mF - (hI * 60 + mI);
 }

@@ -8,6 +8,7 @@ import { globalLimiter } from './middlewares/rateLimiter';
 import authRoutes from './routes/auth.routes';
 import turnoRoutes from './routes/turno.routes';
 import horarioRoutes from './routes/horario.routes';
+import servicioRoutes from './routes/servicio.routes';
 import setupRoutes from './routes/setup.routes';
 
 dotenv.config();
@@ -30,6 +31,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/setup', setupRoutes);
 app.use('/api/turnos', turnoRoutes);
 app.use('/api/horarios', horarioRoutes);
+app.use('/api/servicios', servicioRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
