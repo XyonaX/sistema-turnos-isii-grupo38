@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { Turno } from './Turno';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Servicio } from './Servicio';
+import { FranjaHoraria } from './FranjaHoraria';
 
 @Entity('horarios')
 export class Horario {
@@ -7,17 +8,15 @@ export class Horario {
   id!: string;
 
   @Column({ type: 'date' })
-  fecha!: Date;
+  fecha!: string;
 
-  @Column({ type: 'time' })
-  horaInicio!: string;
+  @Column({ type: 'int', default: 60 })
+  lapsoMinutos!: number;
 
-  @Column({ type: 'time' })
-  horaFin!: string;
+  @ManyToOne(() => Servicio, (servicio) => servicio.horarios, { eager: false, nullable: true })
+  @JoinColumn({ name: 'servicioId' })
+  servicio?: Servicio;
 
-  @Column({ default: true })
-  disponible!: boolean;
-
-  @OneToMany(() => Turno, (turno) => turno.horario)
-  turnos!: Turno[];
+  @OneToMany(() => FranjaHoraria, (franja) => franja.horario)
+  franjas!: FranjaHoraria[];
 }

@@ -1,31 +1,41 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
-import { Turno } from './Turno';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+  CreateDateColumn,
+  JoinColumn,
+} from 'typeorm';
 
-export enum RolUsuario {
-  CLIENTE = 'cliente',
-  ADMIN = 'admin',
-}
+import { Rol } from './Rol';
+import { Servicio } from './Servicio';
+import { Turno } from './Turno';
 
 @Entity('usuarios')
 export class Usuario {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   nombre!: string;
 
-  @Column({ unique: true, length: 150 })
+  @Column({ type: 'varchar', length: 150, unique: true })
   email!: string;
 
-  @Column()
+  @Column({ type: 'varchar', length: 255, select: false })
   passwordHash!: string;
-
-  @Column({ type: 'enum', enum: RolUsuario, default: RolUsuario.CLIENTE })
-  rol!: RolUsuario;
 
   @CreateDateColumn()
   creadoEn!: Date;
 
+  @ManyToOne(() => Rol, (rol) => rol.usuarios, { eager: false })
+  @JoinColumn({ name: 'rolId' })
+  rol!: Rol;
+
   @OneToMany(() => Turno, (turno) => turno.cliente)
   turnos!: Turno[];
+
+  @OneToMany(() => Servicio, (servicio) => servicio.profesional)
+  servicios!: Servicio[];
 }
