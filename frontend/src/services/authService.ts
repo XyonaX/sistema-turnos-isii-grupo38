@@ -36,12 +36,13 @@ export const authService = {
     }
   },
 
-  async register(nombre: string, email: string, password: string): Promise<string> {
+  async register(nombre: string, email: string, password: string, rol: string): Promise<string> {
     try {
       const response = await api.post<LoginResponse>('/auth/register', {
         nombre,
         email,
         password,
+        rol,
       });
 
       const { token } = response.data;
@@ -73,7 +74,7 @@ export const authService = {
       localStorage.removeItem('user_email');
     }
   },
-
+  // Método auxiliar para obtener el token actual
   getToken(): string | null {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('token');

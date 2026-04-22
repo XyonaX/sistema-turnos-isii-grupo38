@@ -2,34 +2,41 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 import { AppDataSource } from '../config/database';
+import { Rol } from '../entities/Rol';
 import { Usuario } from '../entities/Usuario';
 
 export class AuthService {
   private usuarioRepo = AppDataSource.getRepository(Usuario);
+  private rolRepo = AppDataSource.getRepository(Rol);
 
   async register(
     nombre: string,
     email: string,
-    password: string
+    password: string,
+    rolNombre: string
   ): Promise<{ token: string; user: { id: string; nombre: string; email: string; rol?: string } }> {
     const existing = await this.usuarioRepo.findOneBy({ email });
     if (existing) throw new Error('El correo ya está registrado');
+
+    const rol = await this.rolRepo.findOneBy({ nombre: rolNombre });
+    if (!rol) throw new Error(`Rol "${rolNombre}" no encontrado`);
+
     const passwordHash = await bcrypt.hash(password, 10);
-    const usuario = this.usuarioRepo.create({ nombre, email, passwordHash });
+    const usuario = this.usuarioRepo.create({ nombre, email, passwordHash, rol });
     const savedUsuario = await this.usuarioRepo.save(usuario);
 
     const usuarioConRol = await this.usuarioRepo.findOne({
       where: { id: savedUsuario.id },
       relations: { rol: true },
     });
-    const rolNombre = usuarioConRol?.rol?.nombre;
+    const rolNombreFromDB = usuarioConRol?.rol?.nombre;
 
     const token = jwt.sign(
       {
         id: savedUsuario.id,
         email: savedUsuario.email,
         nombre: savedUsuario.nombre,
-        rol: rolNombre,
+        rol: rolNombreFromDB,
       },
       process.env.JWT_SECRET as string,
       { expiresIn: (process.env.JWT_EXPIRES_IN ?? '24h') as jwt.SignOptions['expiresIn'] }
@@ -41,7 +48,7 @@ export class AuthService {
         id: savedUsuario.id,
         nombre: savedUsuario.nombre,
         email: savedUsuario.email,
-        rol: rolNombre,
+        rol: rolNombreFromDB,
       },
     };
   }

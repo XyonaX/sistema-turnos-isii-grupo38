@@ -13,6 +13,7 @@ interface RegisterFormData {
   nombre: string;
   email: string;
   password: string;
+  rol: 'cliente' | 'profesional';
 }
 
 export default function RegisterPage() {
@@ -49,7 +50,7 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormData) => {
     setServerError('');
     try {
-      await authService.register(data.nombre, data.email, data.password);
+      await authService.register(data.nombre, data.email, data.password, data.rol);
 
       // Esperar a que el estado se actualice para obtener el rol
       setTimeout(() => {
@@ -206,6 +207,30 @@ export default function RegisterPage() {
               ) : (
                 <p className="mt-1.5 text-xs text-[var(--text-muted)]">Minimo 8 caracteres</p>
               )}
+            </div>
+
+            {/* Rol */}
+            <div className="flex flex-col">
+              <label
+                htmlFor="rol"
+                className="text-sm font-medium text-[var(--text-secondary)] mb-1.5"
+              >
+                Tipo de cuenta
+              </label>
+              <select
+                id="rol"
+                className={`w-full px-4 py-3 rounded-xl text-sm bg-[var(--bg-secondary)] text-[var(--text-primary)] outline-none transition-all duration-200 border-[1.5px] cursor-pointer ${
+                  errors.rol
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                    : 'border-[var(--border)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15'
+                }`}
+                {...register('rol', { required: 'Seleccioná un tipo de cuenta' })}
+              >
+                <option value="">Seleccioná...</option>
+                <option value="cliente">Paciente / Cliente</option>
+                <option value="profesional">Profesional</option>
+              </select>
+              {errors.rol && <p className="mt-1.5 text-xs text-red-500">{errors.rol.message}</p>}
             </div>
 
             {/* Submit */}

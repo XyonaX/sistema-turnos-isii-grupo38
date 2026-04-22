@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsEmail, IsString, IsIn, MinLength, MaxLength, Matches } from 'class-validator';
 
 export class RegisterDTO {
   @IsString({ message: 'El nombre debe ser texto' })
@@ -17,6 +17,10 @@ export class RegisterDTO {
     message: 'La contraseña debe contener al menos una letra y un número',
   })
   password!: string;
+
+  @IsString({ message: 'El rol es requerido' })
+  @IsIn(['cliente', 'profesional'], { message: 'El rol debe ser cliente o profesional' })
+  rol!: string;
 }
 
 export class LoginDTO {

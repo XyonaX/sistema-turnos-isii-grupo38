@@ -3,12 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+
 import { authService } from '../services/authService';
 
 interface RegisterFormData {
   nombre: string;
   email: string;
   password: string;
+  rol: string;
 }
 
 export function RegisterForm({
@@ -30,7 +32,7 @@ export function RegisterForm({
     setServerError('');
     setSuccessMessage('');
     try {
-      await authService.register(data.nombre, data.email, data.password);
+      await authService.register(data.nombre, data.email, data.password, data.rol);
       setSuccessMessage('Registro exitoso. Redirigiendo...');
 
       // Pequeño delay para que se guarden los datos en localStorage
