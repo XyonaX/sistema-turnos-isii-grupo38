@@ -66,7 +66,7 @@ export class TurnoService {
         });
       }
 
-      // No hay turno previo — crear uno nuevo
+      // No hay turno previo — crear uno nuevo || Agendar el turno y marcar la franja como no disponible
       await queryRunner.manager.update(FranjaHoraria, { id: franjaId }, { disponible: false });
 
       const turno = queryRunner.manager.create(Turno, {

@@ -8,7 +8,12 @@ const controller = new TurnoController();
 
 router.post('/', isAuthenticated, controller.reservar);
 router.get('/mis-turnos', isAuthenticated, controller.getMisTurnos);
-router.patch('/profesional/:id/cancelar', isAuthenticated, isProfesional, controller.cancelarProfesional);
+router.patch(
+  '/profesional/:id/cancelar',
+  isAuthenticated,
+  isProfesional,
+  controller.cancelarProfesional
+);
 router.patch('/:id/cancelar', isAuthenticated, controller.cancelarMio);
 router.get('/profesional', isAuthenticated, isProfesional, controller.getTurnosProfesional);
 router.get('/admin', isAuthenticated, isAdmin, controller.getTodos);

@@ -58,6 +58,7 @@ export class AuthService {
     password: string
   ): Promise<{ token: string; user: { id: string; nombre: string; email: string; rol?: string } }> {
     // addSelect needed because passwordHash has select: false
+    //Validar que el usuario existe y comparar contraseña
     const usuario = await this.usuarioRepo
       .createQueryBuilder('usuario')
       .addSelect('usuario.passwordHash')
