@@ -163,7 +163,7 @@ export default function ProfesionalTurnosPage() {
     );
   }
 
-  if (user?.rol !== 'profesional') {
+  if (user?.rol !== 'Profesional') {
     return (
       <>
         <Navbar />

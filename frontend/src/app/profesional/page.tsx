@@ -1,4 +1,5 @@
 'use client';
+
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -8,7 +9,6 @@ export default function ProfesionalPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirigir al dashboard
     router.push('/profesional/dashboard');
   }, [router]);
 

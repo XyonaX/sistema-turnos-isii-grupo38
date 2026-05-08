@@ -12,5 +12,6 @@ const controller = new AuthController();
 router.post('/register', authLimiter, validateDTO(RegisterDTO), controller.register);
 router.post('/login', authLimiter, validateDTO(LoginDTO), controller.login);
 router.post('/logout', isAuthenticated, controller.logout);
+router.post('/cambiar-rol', isAuthenticated, controller.cambiarRol);
 
 export default router;

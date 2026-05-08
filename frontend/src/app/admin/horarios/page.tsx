@@ -167,7 +167,7 @@ export default function AdminHorariosPage() {
   }
 
   // Si no es admin, mostrar mensaje
-  if (user?.rol !== 'admin') {
+  if (user?.rol !== 'Admin') {
     return (
       <>
         <Navbar />

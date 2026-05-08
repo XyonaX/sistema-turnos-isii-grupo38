@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Fondo verde redondeado -->
+  <rect width="200" height="200" fill="#16a34a" rx="40"/>
+  <!-- Marco blanco interior -->
+  <rect x="30" y="30" width="140" height="140" fill="none" stroke="white" stroke-width="8" rx="20"/>
+  <!-- Línea horizontal blanca (representa un calendario o reserva) -->
+  <line x1="60" y1="85" x2="140" y2="85" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <!-- Rectángulos pequeños blancos (representan espacios de turno) -->
+  <rect x="60" y="105" width="16" height="16" fill="white" rx="2"/>
+  <rect x="85" y="105" width="16" height="16" fill="white" rx="2"/>
+  <rect x="110" y="105" width="16" height="16" fill="white" rx="2"/>
+  <rect x="135" y="105" width="16" height="16" fill="white" rx="2"/>
+</svg>
