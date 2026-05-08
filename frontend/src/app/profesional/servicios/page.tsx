@@ -144,7 +144,7 @@ export default function ProfesionalServiciosPage() {
     );
   }
 
-  if (user?.rol !== 'profesional') {
+  if (user?.rol !== 'Profesional') {
     return (
       <>
         <Navbar />

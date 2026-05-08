@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -15,6 +16,7 @@ interface AuthUser {
 
 interface AuthContextValue {
   isAuthenticated: boolean;
+  isLoading: boolean;
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -22,6 +24,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue>({
   isAuthenticated: false,
+  isLoading: true,
   user: null,
   login: async () => {},
   logout: () => {},
@@ -33,57 +36,60 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
     if (parts.length !== 3) return null;
     const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
-    const decoded = atob(padded);
-    return JSON.parse(decoded) as Record<string, unknown>;
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
   } catch {
     return null;
   }
 }
 
+function getUserFromToken(token: string): AuthUser | null {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return null;
+  return {
+    id: typeof payload['id'] === 'string' ? payload['id'] : '',
+    nombre:
+      typeof payload['nombre'] === 'string'
+        ? payload['nombre']
+        : typeof payload['name'] === 'string'
+          ? payload['name']
+          : '',
+    email: typeof payload['email'] === 'string' ? payload['email'] : '',
+    rol: typeof payload['rol'] === 'string' ? payload['rol'] : 'cliente',
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [mounted, setMounted] = useState(false);
 
-  // Función para actualizar el estado basado en localStorage
-  const updateAuthState = () => {
+  // ← Inicializar estado directamente desde localStorage, sin useEffect
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return !!localStorage.getItem('token');
+  });
+
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (typeof window === 'undefined') return null;
     const token = localStorage.getItem('token');
-    if (!token) {
-      setIsAuthenticated(false);
-      setUser(null);
-      return;
-    }
+    if (!token) return null;
+    return getUserFromToken(token);
+  });
 
-    setIsAuthenticated(true);
-
-    const payload = decodeJwtPayload(token);
-    if (payload) {
-      const id = typeof payload['id'] === 'string' ? payload['id'] : '';
-      const nombre =
-        typeof payload['nombre'] === 'string'
-          ? payload['nombre']
-          : typeof payload['name'] === 'string'
-            ? payload['name']
-            : '';
-      const email = typeof payload['email'] === 'string' ? payload['email'] : '';
-      const rol = typeof payload['rol'] === 'string' ? payload['rol'] : 'cliente';
-      setUser({ id, nombre, email, rol });
-    } else {
-      // Si el token no es válido, limpiar
-      setIsAuthenticated(false);
-      setUser(null);
-    }
-  };
+  // isLoading solo es true brevemente para hidratar en cliente
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Actualizar estado inicial
-    updateAuthState();
-    setMounted(true);
+    // Solo marcar como listo — el estado ya se inicializó arriba
+    setIsLoading(false);
 
-    // Escuchar cambios de localStorage (de otra pestaña)
     const handleStorageChange = () => {
-      updateAuthState();
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsAuthenticated(false);
+        setUser(null);
+      } else {
+        setIsAuthenticated(true);
+        setUser(getUserFromToken(token));
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -91,38 +97,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await authService.login(email, password);
-    setIsAuthenticated(true);
-
-    // Decodificar el token y extraer el usuario
+    await authService.login(email, password);
     const token = localStorage.getItem('token');
     if (token) {
-      const payload = decodeJwtPayload(token);
-      if (payload) {
-        const id = typeof payload['id'] === 'string' ? payload['id'] : '';
-        const nombre =
-          typeof payload['nombre'] === 'string'
-            ? payload['nombre']
-            : typeof payload['name'] === 'string'
-              ? payload['name']
-              : '';
-        const userEmail = typeof payload['email'] === 'string' ? payload['email'] : '';
-        const rol = typeof payload['rol'] === 'string' ? payload['rol'] : 'cliente';
-        setUser({ id, nombre, email: userEmail, rol });
-      }
+      const userData = getUserFromToken(token);
+      setIsAuthenticated(true);
+      setUser(userData);
     }
   };
 
   const logout = () => {
     authService.logout();
-    // Actualizar el estado inmediatamente
     setIsAuthenticated(false);
     setUser(null);
     router.push('/');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

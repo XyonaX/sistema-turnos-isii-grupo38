@@ -27,51 +27,42 @@ export function LoginForm({
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>();
 
-  const onSubmit = async (data: LoginFormData) => {
-    setServerError('');
+const onSubmit = async (data: LoginFormData) => {
+  setServerError('');
+  try {
+    // 1. Logueamos
+    await login(data.email, data.password);
+
+    // 2. Obtenemos el token del localStorage
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
     try {
-      await login(data.email, data.password);
+      // Decodificación del payload del JWT
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(window.atob(base64));
 
-      // Esperar a que el estado se actualice para obtener el rol
-      setTimeout(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-          // Decodificar el token para verificar el rol
-          try {
-            const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-            const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
-            const payload = JSON.parse(atob(padded)) as any;
-            const rol = payload.rol;
-
-            if (rol === 'admin') {
-              router.push('/disponibilidad');
-            } else {
-              router.push('/mis-turnos');
-            }
-          } catch {
-            router.push('/mis-turnos');
-          }
-        }
-      }, 0);
-    } catch (err: unknown) {
-      if (
-        err &&
-        typeof err === 'object' &&
-        'response' in err &&
-        err.response &&
-        typeof err.response === 'object' &&
-        'data' in err.response &&
-        err.response.data &&
-        typeof err.response.data === 'object' &&
-        'message' in err.response.data
-      ) {
-        const msg = (err.response.data as { message: string }).message;
-        setServerError(msg);
+      // 3. COMPARACIÓN CON TUS ROLES REALES (MySQL)
+      // Usamos el nombre exacto que cargamos: 'Profesional' o 'Cliente'
+      if (payload.rol === 'Profesional') {
+        router.push('/disponibilidad');
+      } else if (payload.rol === 'Cliente') {
+        router.push('/mis-turnos');
       } else {
-        setServerError('Credenciales invalidas. Verifica tu email y contrasena.');
+        // Por si acaso hay un rol 'Admin' u otro
+        router.push('/'); 
       }
+    } catch (decodeError) {
+      console.error("Error al decodificar token:", decodeError);
+      setServerError("Error en la sesión. Intenta de nuevo.");
     }
-  };
+
+  } catch (err: any) {
+    // Manejo de errores de servidor (tus credenciales inválidas)
+    setServerError(err.response?.data?.message || 'Error al iniciar sesión');
+  }
+};
 
   return (
     <>

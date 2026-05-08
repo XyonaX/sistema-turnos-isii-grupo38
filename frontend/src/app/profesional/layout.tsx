@@ -6,11 +6,12 @@ import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ProfesionalLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // Esperar a que el contexto esté montado (token en localStorage)
+    if (isLoading) return;
+
     const token = localStorage.getItem('token');
 
     if (!token || !isAuthenticated) {
@@ -18,14 +19,15 @@ export default function ProfesionalLayout({ children }: { children: React.ReactN
       return;
     }
 
-    if (user && user.rol !== 'profesional') {
+    if (user && user.rol !== 'Profesional') {  // ← mayúscula
       router.replace('/');
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user, router, isLoading]);
 
-  // Mientras se verifica, no renderizar nada para evitar flash de contenido
+  if (isLoading) return null;
+
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  if (!token || !isAuthenticated || (user && user.rol !== 'profesional')) {
+  if (!token || !isAuthenticated || (user && user.rol !== 'Profesional')) {  // ← mayúscula
     return null;
   }
 

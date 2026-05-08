@@ -73,7 +73,7 @@ export default function ProfesionalDashboardPage() {
     );
   }
 
-  if (user?.rol !== 'profesional') {
+  if (user?.rol !== 'Profesional') {
     return (
       <>
         <Navbar />
@@ -182,7 +182,7 @@ export default function ProfesionalDashboardPage() {
               </div>
               <div className="text-lg font-bold mb-6">{stats.tarjeta}</div>
               <div className="flex items-center justify-between text-xs opacity-75">
-                <span>ID: {user?.id?.substring(0, 8)}</span>
+               
               </div>
             </div>
           </div>

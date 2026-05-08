@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   title: 'TurnoFácil — Sistema de Gestión de Turnos',
   description:
     'Reservá turnos online de manera fácil, rápida y segura. Gestioná tu agenda sin complicaciones.',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
