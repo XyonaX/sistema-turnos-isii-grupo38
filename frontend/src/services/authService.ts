@@ -1,3 +1,5 @@
+'use client';
+
 import api from './api';
 
 interface LoginResponse {
@@ -12,40 +14,67 @@ interface LoginResponse {
 
 export const authService = {
   async login(email: string, password: string): Promise<string> {
-    const response = await api.post<LoginResponse>('/auth/login', { email, password });
-    const { token } = response.data;
-    localStorage.setItem('token', token);
-    if (response.data.user) {
-      localStorage.setItem('user_nombre', response.data.user.nombre);
-      localStorage.setItem('user_email', response.data.user.email);
-      localStorage.setItem('user_rol', response.data.user.rol || 'usuario');
+    try {
+      const response = await api.post<LoginResponse>('/auth/login', {
+        email,
+        password,
+      });
+
+      const { token } = response.data;
+      localStorage.setItem('token', token);
+
+      // Guardar info del usuario si está disponible
+      if (response.data.user) {
+        localStorage.setItem('user_nombre', response.data.user.nombre);
+        localStorage.setItem('user_email', response.data.user.email);
+        localStorage.setItem('user_rol', response.data.user.rol || 'usuario');
+      }
+
+      return token;
+    } catch (error) {
+      throw error;
     }
-    return token;
   },
 
-  async register(nombre: string, email: string, password: string): Promise<string> {
-    const response = await api.post<LoginResponse>('/auth/register', { nombre, email, password });
-    const { token } = response.data;
-    localStorage.setItem('token', token);
-    if (response.data.user) {
-      localStorage.setItem('user_nombre', response.data.user.nombre);
-      localStorage.setItem('user_email', response.data.user.email);
-      localStorage.setItem('user_rol', response.data.user.rol || 'usuario');
+  async register(nombre: string, email: string, password: string, rol: string): Promise<string> {
+    try {
+      const response = await api.post<LoginResponse>('/auth/register', {
+        nombre,
+        email,
+        password,
+        rol,
+      });
+
+      const { token } = response.data;
+      localStorage.setItem('token', token);
+
+      if (response.data.user) {
+        localStorage.setItem('user_nombre', response.data.user.nombre);
+        localStorage.setItem('user_email', response.data.user.email);
+        localStorage.setItem('user_rol', response.data.user.rol || 'usuario');
+      }
+
+      return token;
+    } catch (error) {
+      throw error;
     }
-    return token;
   },
 
   logout(): void {
     try {
-      api.post('/auth/logout').catch(() => {});
+      // Intentar notificar al backend
+      api.post('/auth/logout').catch(() => {
+        // Ignorar errores del backend al logout
+      });
     } finally {
+      // Siempre limpiar localStorage sin importar la respuesta del servidor
       localStorage.removeItem('token');
       localStorage.removeItem('user_nombre');
       localStorage.removeItem('user_rol');
       localStorage.removeItem('user_email');
     }
   },
-
+  // Método auxiliar para obtener el token actual
   getToken(): string | null {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('token');

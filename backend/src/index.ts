@@ -10,6 +10,7 @@ import turnoRoutes from './routes/turno.routes';
 import horarioRoutes from './routes/horario.routes';
 import servicioRoutes from './routes/servicio.routes';
 import setupRoutes from './routes/setup.routes';
+import { runSeeds } from './seeds/catalogs';
 
 dotenv.config();
 
@@ -36,8 +37,10 @@ app.use('/api/servicios', servicioRoutes);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 AppDataSource.initialize()
-  .then(() => {
+  .then(async () => {
     console.log('Base de datos conectada');
+    await runSeeds();
+    console.log('Seeds ejecutados');
     app.listen(PORT, () => console.log(`Backend corriendo en http://localhost:${PORT}`));
   })
   .catch((err) => {

@@ -1,61 +1,25 @@
-import { Request, Response } from 'express';
-import { AppDataSource } from '../config/database';
-import { Usuario } from '../entities/Usuario';
-import { Rol } from '../entities/Rol';
-import { AuthService } from '../services/AuthService';
 import bcrypt from 'bcryptjs';
+import type { Request, Response } from 'express';
+
+import { AppDataSource } from '../config/database';
+import { Rol } from '../entities/Rol';
+import { Usuario } from '../entities/Usuario';
 
 export class AdminSetupController {
   private usuarioRepo = AppDataSource.getRepository(Usuario);
   private rolRepo = AppDataSource.getRepository(Rol);
-  private authService = new AuthService();
-
-  // Crear roles iniciales
-  crearRolesIniciales = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const rolesACrear = [
-        { nombre: 'cliente', descripcion: 'Usuario cliente que reserva turnos' },
-        { nombre: 'profesional', descripcion: 'Profesional que ofrece servicios' },
-        { nombre: 'admin', descripcion: 'Administrador del sistema' },
-      ];
-
-      const rolesCreados = [];
-
-      for (const rolData of rolesACrear) {
-        const rolExistente = await this.rolRepo.findOneBy({ nombre: rolData.nombre });
-        if (!rolExistente) {
-          const nuevoRol = this.rolRepo.create(rolData);
-          await this.rolRepo.save(nuevoRol);
-          rolesCreados.push(rolData.nombre);
-        }
-      }
-
-      res.json({
-        message: '✓ Roles configurados correctamente',
-        rolesCreados: rolesCreados.length > 0 ? rolesCreados : 'Todos ya existían',
-      });
-    } catch (error: any) {
-      console.error('Error creando roles:', error);
-      res.status(500).json({
-        message: error.message || 'Error al crear los roles',
-      });
-    }
-  };
 
   crearAdminInicial = async (req: Request, res: Response): Promise<void> => {
     try {
-      // Verificar si ya existe un admin
-      const adminRol = await this.rolRepo.findOneBy({ nombre: 'admin' });
-      const adminExistente = adminRol
-        ? await this.usuarioRepo.findOne({
-            where: { rol: adminRol },
-            relations: { rol: true },
-          })
-        : null;
+      // Verificar si ya existe un profesional
+      const profesionalExistente = await this.usuarioRepo.findOne({
+        where: { rol: { nombre: 'profesional' } },
+        relations: { rol: true },
+      });
 
-      if (adminExistente) {
+      if (profesionalExistente) {
         res.status(400).json({
-          message: 'Ya existe un administrador en el sistema',
+          message: 'Ya existe un profesional en el sistema',
         });
         return;
       }
@@ -86,35 +50,33 @@ export class AdminSetupController {
         return;
       }
 
-      // Obtener el rol admin (crear si no existe)
-      let rolAdmin = await this.rolRepo.findOneBy({ nombre: 'admin' });
-      if (!rolAdmin) {
-        rolAdmin = this.rolRepo.create({
-          nombre: 'admin',
-          descripcion: 'Administrador del sistema',
-        });
-        await this.rolRepo.save(rolAdmin);
+      // Buscar o crear el rol profesional
+      let rolProfesional = await this.rolRepo.findOneBy({ nombre: 'profesional' });
+      if (!rolProfesional) {
+        rolProfesional = await this.rolRepo.save(
+          this.rolRepo.create({ nombre: 'profesional', descripcion: 'Profesional del sistema' })
+        );
       }
 
-      // Crear el admin
+      // Crear el profesional
       const passwordHash = await bcrypt.hash(password, 10);
-      const admin = this.usuarioRepo.create({
+      const profesional = this.usuarioRepo.create({
         nombre,
         email,
         passwordHash,
-        rol: rolAdmin,
+        rol: rolProfesional,
       });
 
-      await this.usuarioRepo.save(admin);
+      await this.usuarioRepo.save(profesional);
 
       res.status(201).json({
-        message: '✓ Administrador creado correctamente',
-        email: admin.email,
+        message: '✓ Profesional creado correctamente',
+        email: profesional.email,
       });
-    } catch (error: any) {
-      console.error('Error creando admin inicial:', error);
+    } catch (error: unknown) {
+      console.error('Error creando profesional inicial:', error);
       res.status(500).json({
-        message: error.message || 'Error al crear el administrador',
+        message: error instanceof Error ? error.message : 'Error al crear el profesional',
       });
     }
   };

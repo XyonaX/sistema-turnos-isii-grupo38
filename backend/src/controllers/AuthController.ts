@@ -7,8 +7,8 @@ export class AuthController {
 
   register = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { nombre, email, password } = req.body;
-      const result = await this.authService.register(nombre, email, password);
+      const { nombre, email, password, rol } = req.body;
+      const result = await this.authService.register(nombre, email, password, rol);
       res.status(201).json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -34,29 +34,4 @@ export class AuthController {
       res.status(500).json({ message: error.message });
     }
   };
-
-  cambiarRol = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const usuarioId = (req as any).user?.id;
-      const { rol } = req.body;
-
-      if (!usuarioId) {
-        res.status(401).json({ message: 'No autenticado' });
-        return;
-      }
-
-      if (!rol) {
-        res.status(400).json({ message: 'El rol es requerido' });
-        return;
-      }
-
-      const nuevoRol = await this.authService.cambiarRol(usuarioId, rol);
-      res.json({
-        message: '✓ Rol actualizado correctamente',
-        rol: nuevoRol,
-      });
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-};
+}

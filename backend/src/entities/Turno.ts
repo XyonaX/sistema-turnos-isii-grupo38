@@ -11,20 +11,13 @@ import {
 import { Usuario } from './Usuario';
 import { FranjaHoraria } from './FranjaHoraria';
 import { Notificacion } from './Notificacion';
-
-export enum EstadoTurno {
-  PENDIENTE = 'pendiente',
-  CONFIRMADO = 'confirmado',
-  CANCELADO = 'cancelado',
-  COMPLETADO = 'completado',
-}
+import { EstadoTurno } from './EstadoTurno';
 
 @Entity('turnos')
 export class Turno {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  // eager: false — se carga explícitamente para evitar exponer passwordHash
   @ManyToOne(() => Usuario, (usuario) => usuario.turnos, { eager: false })
   @JoinColumn({ name: 'clienteId' })
   cliente!: Usuario;
@@ -33,8 +26,9 @@ export class Turno {
   @JoinColumn({ name: 'franjaId' })
   franja?: FranjaHoraria | null;
 
-  @Column({ type: 'enum', enum: EstadoTurno, default: EstadoTurno.PENDIENTE })
-  estado!: EstadoTurno;
+  @ManyToOne(() => EstadoTurno, (et) => et.turnos, { eager: false, nullable: false })
+  @JoinColumn({ name: 'estadoTurnoId' })
+  estadoTurno!: EstadoTurno;
 
   @Column({ type: 'text', nullable: true })
   notas?: string;

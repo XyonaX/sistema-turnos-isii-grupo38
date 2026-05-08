@@ -1,13 +1,22 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  JoinColumn,
+} from 'typeorm';
 import { Turno } from './Turno';
+import { TipoNotificacion } from './TipoNotificacion';
 
 @Entity('notificaciones')
 export class Notificacion {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  tipo!: string;
+  @ManyToOne(() => TipoNotificacion, (tn) => tn.notificaciones, { eager: false, nullable: false })
+  @JoinColumn({ name: 'tipoNotificacionId' })
+  tipoNotificacion!: TipoNotificacion;
 
   @Column({ type: 'text' })
   mensaje!: string;
