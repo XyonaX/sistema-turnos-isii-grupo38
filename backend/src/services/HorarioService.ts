@@ -2,6 +2,8 @@ import { AppDataSource } from '../config/database';
 import { FranjaHoraria } from '../entities/FranjaHoraria';
 import { Horario } from '../entities/Horario';
 import { Servicio } from '../entities/Servicio';
+import { ESTADO_FRANJA } from '../constants/catalog';
+import { getEstadoFranjaId } from '../repositories/catalogRepository';
 
 export class HorarioService {
   private horarioRepo = AppDataSource.getRepository(Horario);
@@ -24,25 +26,16 @@ export class HorarioService {
   }
 
   async crear(
-    profesionalId: string,
     servicioId: string,
-    fechaInicio: Date,
-    fechaFin: Date,
-    horaInicio: string,
-    horaFin: string,
-    lapsoMinutos: number = 60
+    fechaInicio: string,
+    fechaFin: string,
+    horaApertura: string,
+    horaCierre: string
   ): Promise<FranjaHoraria[]> {
-    // Validaciones básicas
-    if (!profesionalId || !servicioId || !fechaInicio || !fechaFin || !horaInicio || !horaFin) {
+    if (!servicioId || !fechaInicio || !fechaFin || !horaApertura || !horaCierre) {
       throw new Error('Todos los campos son requeridos');
     }
 
-    // Validar que lapsoMinutos es positivo
-    if (lapsoMinutos <= 0) {
-      throw new Error('El lapso en minutos debe ser positivo');
-    }
-
-    // Validar que el servicio existe y que el profesional es propietario
     const servicio = await this.servicioRepo.findOne({
       where: { id: servicioId },
       relations: { profesional: true },
@@ -52,17 +45,21 @@ export class HorarioService {
       throw new Error('Servicio no encontrado');
     }
 
-    if (servicio.profesional.id !== profesionalId) {
-      throw new Error('El profesional no es propietario de este servicio');
+    const duracionMinutos = servicio.duracionMinutos;
+
+    if (duracionMinutos <= 0) {
+      throw new Error('La duración del servicio debe ser positiva');
     }
 
-    // Validar fechas
+    const parseLocalDate = (str: string): Date => {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    };
+
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const fechaInicioVal = new Date(fechaInicio);
-    fechaInicioVal.setHours(0, 0, 0, 0);
-    const fechaFinVal = new Date(fechaFin);
-    fechaFinVal.setHours(0, 0, 0, 0);
+    const fechaInicioVal = parseLocalDate(fechaInicio);
+    const fechaFinVal = parseLocalDate(fechaFin);
 
     if (fechaInicioVal < hoy) {
       throw new Error('No se pueden crear horarios en fechas pasadas');
@@ -72,120 +69,105 @@ export class HorarioService {
       throw new Error('La fecha de fin debe ser mayor o igual a la fecha de inicio');
     }
 
-    // Validar formato de horas
-    const formatoHora = /^\d{2}:\d{2}$/;
-    if (!formatoHora.test(horaInicio) || !formatoHora.test(horaFin)) {
-      throw new Error('El formato de hora debe ser HH:MM');
+    if (horaApertura >= horaCierre) {
+      throw new Error('La hora de cierre debe ser mayor a la hora de apertura');
     }
 
-    if (horaInicio >= horaFin) {
-      throw new Error('La hora de fin debe ser mayor a la hora de inicio');
-    }
+    const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
 
-    // Generar franjas para cada fecha en el rango
-    const franjas: FranjaHoraria[] = [];
-    const fechaActual = new Date(fechaInicioVal);
-
-    while (fechaActual <= fechaFinVal) {
-      const fechaStr = fechaActual.toISOString().split('T')[0];
-
-      // Buscar o crear el Horario para esa fecha
-      let horario = await this.horarioRepo.findOne({
-        where: { fecha: fechaStr, servicio: { id: servicioId } },
+    return AppDataSource.transaction(async (manager) => {
+      const horario = manager.create(Horario, {
+        fechaInicio,
+        fechaFin,
+        horaApertura,
+        horaCierre,
+        servicio: { id: servicioId },
       });
+      const savedHorario = await manager.save(horario);
 
-      if (!horario) {
-        // Use property assignment to avoid TypeORM create() overload ambiguity
-        const nuevoHorario = this.horarioRepo.create();
-        nuevoHorario.fecha = fechaStr;
-        nuevoHorario.lapsoMinutos = lapsoMinutos;
-        nuevoHorario.servicio = servicio;
-        horario = await this.horarioRepo.save(nuevoHorario);
-      }
+      const franjas: FranjaHoraria[] = [];
+      const fechaActual = new Date(fechaInicioVal);
 
-      // Generar FranjaHoraria con lapsoMinutos
-      let horaActual = horaInicio;
+      while (fechaActual <= fechaFinVal) {
+        const y = fechaActual.getFullYear();
+        const m = String(fechaActual.getMonth() + 1).padStart(2, '0');
+        const d = String(fechaActual.getDate()).padStart(2, '0');
+        const fechaStr = `${y}-${m}-${d}`;
+        let horaActual = horaApertura;
 
-      while (horaActual < horaFin) {
-        const horaSiguiente = this.sumarMinutos(horaActual, lapsoMinutos);
+        while (horaActual < horaCierre) {
+          const horaFin = this.sumarMinutos(horaActual, duracionMinutos);
+          if (horaFin > horaCierre) break;
 
-        // Prevenir franja parcial al final - si horaSiguiente > horaFin, no crear
-        if (horaSiguiente > horaFin) {
-          break;
-        }
-
-        const existente = await this.franjaRepo.findOne({
-          where: {
-            horario: { id: horario?.id },
+          const franja = manager.create(FranjaHoraria, {
+            fecha: fechaStr,
             horaInicio: horaActual,
-            horaFin: horaSiguiente,
-          },
-        });
-
-        if (!existente) {
-          const franja = this.franjaRepo.create();
-          franja.horaInicio = horaActual;
-          franja.horaFin = horaSiguiente;
-          franja.disponible = true;
-          franja.horario = horario!;
-          franjas.push(await this.franjaRepo.save(franja));
+            horaFin,
+            horario: savedHorario,
+            estadoFranja: { id: estadoLibreId },
+          });
+          franjas.push(franja);
+          horaActual = horaFin;
         }
 
-        horaActual = horaSiguiente;
+        fechaActual.setDate(fechaActual.getDate() + 1);
       }
 
-      // Siguiente día
-      fechaActual.setDate(fechaActual.getDate() + 1);
-    }
-
-    return franjas;
+      return manager.save(franjas);
+    });
   }
 
   async getDisponibles(): Promise<FranjaHoraria[]> {
     const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const en30Dias = new Date(hoy);
-    en30Dias.setDate(hoy.getDate() + 30);
-
     const hoyStr = hoy.toISOString().split('T')[0];
-    const en30DiasStr = en30Dias.toISOString().split('T')[0];
 
-    return this.franjaRepo
+    return AppDataSource.getRepository(FranjaHoraria)
       .createQueryBuilder('franja')
+      .leftJoinAndSelect('franja.estadoFranja', 'estadoFranja')
       .leftJoinAndSelect('franja.horario', 'horario')
       .leftJoinAndSelect('horario.servicio', 'servicio')
       .leftJoinAndSelect('servicio.profesional', 'profesional')
-      .where('franja.disponible = true')
-      .andWhere('horario.fecha BETWEEN :hoy AND :fin', { hoy: hoyStr, fin: en30DiasStr })
-      .orderBy('horario.fecha', 'ASC')
+      .where('estadoFranja.nombre = :nombre', { nombre: ESTADO_FRANJA.LIBRE })
+      .andWhere('franja.fecha >= :hoy', { hoy: hoyStr })
+      .orderBy('franja.fecha', 'ASC')
       .addOrderBy('franja.horaInicio', 'ASC')
       .getMany();
   }
 
   async toggleDisponibilidad(id: string): Promise<FranjaHoraria> {
-    const franja = await this.franjaRepo.findOneBy({ id });
+    const franja = await this.franjaRepo.findOne({
+      where: { id },
+      relations: { estadoFranja: true },
+    });
     if (!franja) throw new Error('Franja horaria no encontrada');
-    franja.disponible = !franja.disponible;
+
+    const esLibre = franja.estadoFranja.nombre === ESTADO_FRANJA.LIBRE;
+    const nuevoEstadoId = esLibre
+      ? await getEstadoFranjaId(ESTADO_FRANJA.BLOQUEADA)
+      : await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
+
+    franja.estadoFranja = { id: nuevoEstadoId } as any;
     return this.franjaRepo.save(franja);
   }
 
   async getAll(): Promise<FranjaHoraria[]> {
     return this.franjaRepo.find({
-      relations: { horario: true },
-      order: { horario: { fecha: 'ASC' }, horaInicio: 'ASC' },
+      relations: { estadoFranja: true, horario: { servicio: true } },
+      order: { fecha: 'ASC', horaInicio: 'ASC' },
     });
   }
 
   async getFranjasByProfesional(profesionalId: string): Promise<FranjaHoraria[]> {
     return this.franjaRepo
       .createQueryBuilder('franja')
+      .leftJoinAndSelect('franja.estadoFranja', 'estadoFranja')
       .leftJoinAndSelect('franja.horario', 'horario')
       .leftJoinAndSelect('horario.servicio', 'servicio')
       .leftJoinAndSelect('servicio.profesional', 'profesional')
       .leftJoinAndSelect('franja.turno', 'turno')
       .leftJoinAndSelect('turno.cliente', 'cliente')
       .where('profesional.id = :profesionalId', { profesionalId })
-      .orderBy('horario.fecha', 'ASC')
+      .orderBy('franja.fecha', 'ASC')
       .addOrderBy('franja.horaInicio', 'ASC')
       .getMany();
   }

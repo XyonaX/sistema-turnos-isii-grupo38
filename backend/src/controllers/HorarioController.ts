@@ -8,37 +8,25 @@ export class HorarioController {
 
   crear = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { servicioId, fechaInicio, fechaFin, horaInicio, horaFin, lapsoMinutos } = req.body;
-      const profesionalId = req.user?.id;
+      const { servicioId, fechaInicio, fechaFin, horaApertura, horaCierre } = req.body;
 
-      // Validar que el usuario está autenticado
-      if (!profesionalId) {
-        res.status(401).json({
-          message: 'Usuario no autenticado',
-        });
-        return;
-      }
-
-      // Validar que los campos estén presentes
-      if (!servicioId || !fechaInicio || !fechaFin || !horaInicio || !horaFin) {
+      if (!servicioId || !fechaInicio || !fechaFin || !horaApertura || !horaCierre) {
         res.status(400).json({
           message:
-            'Los campos servicioId, fechaInicio, fechaFin, horaInicio y horaFin son requeridos',
+            'Los campos servicioId, fechaInicio, fechaFin, horaApertura y horaCierre son requeridos',
         });
         return;
       }
 
-      const horario = await this.horarioService.crear(
-        profesionalId,
+      const franjas = await this.horarioService.crear(
         servicioId,
-        new Date(fechaInicio),
-        new Date(fechaFin),
-        horaInicio,
-        horaFin,
-        lapsoMinutos || 60
+        fechaInicio,
+        fechaFin,
+        horaApertura,
+        horaCierre
       );
 
-      res.status(201).json(horario);
+      res.status(201).json(franjas);
     } catch (error: any) {
       console.error('Error creando horario:', error);
       res.status(400).json({

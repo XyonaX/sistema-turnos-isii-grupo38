@@ -8,12 +8,17 @@ interface CrearHorarioParams {
   fechaFin: string;
   horaInicio: string;
   horaFin: string;
-  lapsoMinutos: number;
 }
 
 export const horarioService = {
   async crear(params: CrearHorarioParams): Promise<FranjaHoraria[]> {
-    const res = await api.post('/horarios', params);
+    const res = await api.post('/horarios', {
+      servicioId: params.servicioId,
+      fechaInicio: params.fechaInicio,
+      fechaFin: params.fechaFin,
+      horaApertura: params.horaInicio,
+      horaCierre: params.horaFin,
+    });
     return res.data;
   },
 

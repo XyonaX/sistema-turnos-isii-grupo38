@@ -1,13 +1,16 @@
 import dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
 
+import { FranjaHoraria } from '../entities/FranjaHoraria';
 import { Horario } from '../entities/Horario';
-import { Turno } from '../entities/Turno';
-import { Usuario } from '../entities/Usuario';
+import { Notificacion } from '../entities/Notificacion';
 import { Rol } from '../entities/Rol';
 import { Servicio } from '../entities/Servicio';
-import { FranjaHoraria } from '../entities/FranjaHoraria';
-import { Notificacion } from '../entities/Notificacion';
+import { Turno } from '../entities/Turno';
+import { Usuario } from '../entities/Usuario';
+import { EstadoFranja } from '../entities/EstadoFranja';
+import { EstadoTurno } from '../entities/EstadoTurno';
+import { TipoNotificacion } from '../entities/TipoNotificacion';
 
 dotenv.config();
 
@@ -20,7 +23,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_DATABASE || 'sistema_turnos',
   synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
-  entities: [Usuario, Turno, Horario, Rol, Servicio, FranjaHoraria, Notificacion],
+  entities: [Usuario, Turno, Horario, Rol, Servicio, FranjaHoraria, Notificacion, EstadoFranja, EstadoTurno, TipoNotificacion],
   migrations: ['src/migrations/*.ts'],
   subscribers: [],
 });

@@ -10,14 +10,13 @@ export class ServicioService {
     profesionalId: string,
     nombre: string,
     descripcion?: string,
-    duracion: number = 60,
-    precio?: number
+    duracionMinutos: number = 60,
+    precio: number = 0
   ): Promise<Servicio> {
     if (!profesionalId || !nombre) {
       throw new Error('Profesional ID y nombre son requeridos');
     }
 
-    // Validar que el profesional existe
     const profesional = await this.usuarioRepo.findOne({
       where: { id: profesionalId },
       relations: { rol: true },
@@ -27,7 +26,6 @@ export class ServicioService {
       throw new Error('Profesional no encontrado');
     }
 
-    // Validar que el usuario es profesional
     if (profesional.rol?.nombre !== 'profesional') {
       throw new Error('Solo los profesionales pueden crear servicios');
     }
@@ -35,7 +33,7 @@ export class ServicioService {
     const servicio = this.servicioRepo.create({
       nombre,
       descripcion: descripcion || '',
-      duracion,
+      duracionMinutos,
       precio,
       profesional,
     });
@@ -68,7 +66,7 @@ export class ServicioService {
 
     const servicio = await this.servicioRepo.findOne({
       where: { id: servicioId },
-      relations: { profesional: true, horarios: true },
+      relations: { profesional: true },
     });
 
     if (!servicio) {
@@ -96,15 +94,13 @@ export class ServicioService {
       throw new Error('Servicio no encontrado');
     }
 
-    // Validar que el profesional es propietario
     if (servicio.profesional.id !== profesionalId) {
       throw new Error('No tienes permiso para actualizar este servicio');
     }
 
-    // Actualizar solo campos permitidos
     if (datos.nombre) servicio.nombre = datos.nombre;
     if (datos.descripcion !== undefined) servicio.descripcion = datos.descripcion;
-    if (datos.duracion !== undefined) servicio.duracion = datos.duracion;
+    if (datos.duracionMinutos !== undefined) servicio.duracionMinutos = datos.duracionMinutos;
     if (datos.precio !== undefined) servicio.precio = datos.precio;
 
     return this.servicioRepo.save(servicio);
@@ -124,7 +120,6 @@ export class ServicioService {
       throw new Error('Servicio no encontrado');
     }
 
-    // Validar que el profesional es propietario
     if (servicio.profesional.id !== profesionalId) {
       throw new Error('No tienes permiso para eliminar este servicio');
     }
