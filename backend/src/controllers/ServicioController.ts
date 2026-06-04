@@ -16,7 +16,7 @@ export class ServicioController {
 
   crear = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { nombre, descripcion, duracion, precio } = req.body;
+      const { nombre, descripcion, duracionMinutos, precio } = req.body;
       const profesionalId = req.user?.id;
 
       if (!profesionalId) {
@@ -29,7 +29,7 @@ export class ServicioController {
         return;
       }
 
-      const servicio = await this.servicioService.crear(profesionalId, nombre, descripcion, duracion, precio);
+      const servicio = await this.servicioService.crear(profesionalId, nombre, descripcion, duracionMinutos, precio);
       res.status(201).json(servicio);
     } catch (error: any) {
       console.error('Error creando servicio:', error);

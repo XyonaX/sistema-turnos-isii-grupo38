@@ -14,10 +14,10 @@ export class Servicio {
   descripcion?: string;
 
   @Column({ type: 'int', default: 60 })
-  duracion!: number;
+  duracionMinutos!: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  precio?: number;
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  precio!: number;
 
   @ManyToOne(() => Usuario, (usuario) => usuario.servicios, { eager: false })
   @JoinColumn({ name: 'profesionalId' })

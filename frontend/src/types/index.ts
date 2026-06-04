@@ -9,7 +9,7 @@ export interface Servicio {
   id: string;
   nombre: string;
   descripcion?: string;
-  duracion: number;
+  duracionMinutos: number;
   precio?: number;
   profesional?: {
     id: string;
@@ -20,18 +20,35 @@ export interface Servicio {
 
 export interface FranjaHoraria {
   id: string;
+  fecha: string;
   horaInicio: string;
   horaFin: string;
-  disponible: boolean;
+  motivoBloqueo?: string;
+  estadoFranja?: {
+    id: string;
+    nombre: string;
+  };
   horario?: {
     id: string;
-    fecha: string;
-    lapsoMinutos: number;
-    servicio?: Servicio;
+    fechaInicio: string;
+    fechaFin: string;
+    horaApertura: string;
+    horaCierre: string;
+    servicio?: {
+      id: string;
+      nombre: string;
+      duracionMinutos: number;
+      precio?: number;
+      profesional?: {
+        id: string;
+        nombre: string;
+        email: string;
+      };
+    };
   };
   turno?: {
     id: string;
-    estado: EstadoTurno;
+    estadoTurno?: { id: string; nombre: string };
     notas?: string;
     cliente?: {
       id: string;
@@ -41,13 +58,13 @@ export interface FranjaHoraria {
   };
 }
 
-export type EstadoTurno = 'pendiente' | 'confirmado' | 'cancelado' | 'completado';
+export type EstadoTurnoNombre = 'Pendiente' | 'Confirmado' | 'Cancelado' | 'Completado' | 'No asistió';
 
 export interface Turno {
   id: string;
   cliente: Usuario;
-  franja?: FranjaHoraria | null; // null for cancelled turnos (FK is freed on cancellation)
-  estado: EstadoTurno;
+  franja?: FranjaHoraria | null;
+  estadoTurno: { id: string; nombre: EstadoTurnoNombre };
   notas?: string;
   creadoEn: string | Date;
 }
@@ -56,14 +73,14 @@ export interface AuthResponse {
   token: string;
 }
 
-/**
- * @deprecated Use FranjaHoraria instead.
- * Kept for backward-compatibility with legacy admin pages.
- */
+/** @deprecated Use FranjaHoraria instead. */
 export interface Horario {
   id: string;
-  fecha: string;
   horaInicio: string;
   horaFin: string;
-  disponible: boolean;
+  estadoFranja?: { id: string; nombre: string };
+  horario?: {
+    id?: string;
+    fecha: string;
+  };
 }

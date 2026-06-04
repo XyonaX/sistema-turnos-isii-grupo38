@@ -87,7 +87,7 @@ export default function ProfesionalServiciosPage() {
       await servicioService.crearServicio({
         nombre,
         descripcion,
-        duracion: parseInt(duracion),
+        duracionMinutos: parseInt(duracion),
         precio: parseFloat(precio),
       });
 
@@ -239,8 +239,8 @@ export default function ProfesionalServiciosPage() {
                         });
                       }
                     }}
-                    min="15"
-                    step="15"
+                    min="1"
+                    step="1"
                     className={`w-full px-4 py-3 rounded-lg border transition-all ${
                       formErrors.duracion
                         ? 'border-red-500 bg-red-500/5'
@@ -397,7 +397,7 @@ export default function ProfesionalServiciosPage() {
                       {servicio.nombre}
                     </h3>
                     <p className="text-xs text-[var(--text-muted)]">
-                      {servicio.duracion} minutos
+                      {servicio.duracionMinutos} minutos
                     </p>
                   </div>
                   {servicio.precio != null && (

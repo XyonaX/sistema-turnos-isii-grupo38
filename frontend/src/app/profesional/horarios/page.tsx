@@ -76,16 +76,6 @@ function calcularPreview(horaInicio: string, horaFin: string, lapso: number, fec
   return { slotsPorDia, dias, totalSlots: slotsPorDia * dias };
 }
 
-// Presets de lapso en minutos
-const LAPSO_PRESETS = [
-  { label: '15 min', value: 15 },
-  { label: '20 min', value: 20 },
-  { label: '30 min', value: 30 },
-  { label: '45 min', value: 45 },
-  { label: '1 hora', value: 60 },
-  { label: '1h 30m', value: 90 },
-  { label: '2 horas', value: 120 },
-];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -104,9 +94,6 @@ export default function ProfesionalHorariosPage() {
   const [fechaFin, setFechaFin] = useState('');
   const [horaInicio, setHoraInicio] = useState('09:00');
   const [horaFin, setHoraFin] = useState('18:00');
-  const [lapsoMinutos, setLapsoMinutos] = useState(30);
-  const [lapsoCustom, setLapsoCustom] = useState('');
-  const [useCustomLapso, setUseCustomLapso] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const today = new Date().toISOString().split('T')[0];
@@ -136,7 +123,8 @@ export default function ProfesionalHorariosPage() {
     }
   };
 
-  const lapsoFinal = useCustomLapso ? parseInt(lapsoCustom) || 0 : lapsoMinutos;
+  const servicioSeleccionado = servicios.find((s) => s.id === servicioId);
+  const lapsoFinal = servicioSeleccionado?.duracionMinutos ?? 0;
   const preview = calcularPreview(horaInicio, horaFin, lapsoFinal, fechaInicio, fechaFin);
 
   const validar = (): boolean => {
@@ -151,15 +139,6 @@ export default function ProfesionalHorariosPage() {
     if (!horaFin) errors.horaFin = 'Ingresá la hora de fin';
     if (horaInicio && horaFin && horaFin <= horaInicio) {
       errors.horaFin = 'La hora de fin debe ser posterior al inicio';
-    }
-    if (lapsoFinal <= 0 || isNaN(lapsoFinal)) {
-      errors.lapso = 'El lapso debe ser mayor a 0';
-    }
-    if (lapsoFinal > 0 && horaInicio && horaFin) {
-      const rangoMin = timeToMinutes(horaFin) - timeToMinutes(horaInicio);
-      if (lapsoFinal > rangoMin) {
-        errors.lapso = 'El lapso es mayor que el rango horario';
-      }
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -180,7 +159,6 @@ export default function ProfesionalHorariosPage() {
         fechaFin,
         horaInicio,
         horaFin,
-        lapsoMinutos: lapsoFinal,
       });
 
       setSuccess(
@@ -282,7 +260,7 @@ export default function ProfesionalHorariosPage() {
                   <option value="">— Seleccionar servicio —</option>
                   {servicios.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.nombre} ({s.duracion} min{s.precio != null ? ` · $${Number(s.precio).toFixed(2)}` : ''})
+                      {s.nombre} ({s.duracionMinutos} min{s.precio != null ? ` · $${Number(s.precio).toFixed(2)}` : ''})
                     </option>
                   ))}
                 </select>
@@ -382,66 +360,6 @@ export default function ProfesionalHorariosPage() {
               </div>
             </div>
 
-            {/* Lapso selector */}
-            <div>
-              <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-3">
-                Duración de cada turno
-              </label>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {LAPSO_PRESETS.map((p) => (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => {
-                      setLapsoMinutos(p.value);
-                      setUseCustomLapso(false);
-                      setFormErrors((prev) => { const n = { ...prev }; delete n.lapso; return n; });
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
-                      !useCustomLapso && lapsoMinutos === p.value
-                        ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
-                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)]'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setUseCustomLapso(true)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
-                    useCustomLapso
-                      ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
-                      : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)]'
-                  }`}
-                >
-                  Personalizado
-                </button>
-              </div>
-              {useCustomLapso && (
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    value={lapsoCustom}
-                    onChange={(e) => {
-                      setLapsoCustom(e.target.value);
-                      setFormErrors((p) => { const n = { ...p }; delete n.lapso; return n; });
-                    }}
-                    placeholder="ej: 25"
-                    min="5"
-                    max="480"
-                    className={`w-32 px-4 py-2.5 rounded-lg border transition-all text-[var(--text-primary)] bg-[var(--bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 ${
-                      formErrors.lapso ? 'border-red-500' : 'border-[var(--border)]'
-                    }`}
-                  />
-                  <span className="text-sm text-[var(--text-muted)]">minutos</span>
-                </div>
-              )}
-              {formErrors.lapso && (
-                <p className="text-red-500 text-xs mt-1.5 font-medium">{formErrors.lapso}</p>
-              )}
-            </div>
-
             {/* Preview box */}
             {preview && (
               <div className="rounded-xl border border-[var(--primary)]/30 bg-[var(--primary)]/5 p-5">
@@ -461,7 +379,7 @@ export default function ProfesionalHorariosPage() {
                   </div>
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mt-3 text-center">
-                  Cada turno dura {lapsoFinal} min · de {horaInicio} a {horaFin}
+                  Cada turno dura {lapsoFinal} min (duración del servicio) · de {horaInicio} a {horaFin}
                 </p>
               </div>
             )}

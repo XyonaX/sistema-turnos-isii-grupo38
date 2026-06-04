@@ -60,7 +60,7 @@ export default function MisTurnosPage() {
       setError(null);
       setSuccess(null);
       await turnoService.cancelar(id);
-      setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, estado: 'cancelado' } : t)));
+      setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, estadoTurno: { id: '', nombre: 'Cancelado' } } : t)));
       setSuccess('Turno cancelado correctamente');
     } catch (err) {
       const error = err as any;
@@ -75,8 +75,8 @@ export default function MisTurnosPage() {
   }
 
   // Separar turnos activos y cancelados
-  const turnosActivos = turnos.filter((t) => t.estado !== 'cancelado');
-  const turnosCancelados = turnos.filter((t) => t.estado === 'cancelado');
+  const turnosActivos = turnos.filter((t) => t.estadoTurno?.nombre !== 'Cancelado');
+  const turnosCancelados = turnos.filter((t) => t.estadoTurno?.nombre === 'Cancelado');
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--bg)]">

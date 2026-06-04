@@ -42,8 +42,8 @@ export default function ProfesionalDashboardPage() {
       const turnos = turnosRes.data || [];
 
       const hoy = new Date().toISOString().split('T')[0];
-      const turnosHoy = turnos.filter((t: any) => t.franja?.horario?.fecha === hoy).length;
-      const turnosPendientes = turnos.filter((t: any) => t.estado === 'pendiente').length;
+      const turnosHoy = turnos.filter((t: any) => t.franja?.fecha === hoy).length;
+      const turnosPendientes = turnos.filter((t: any) => t.estadoTurno?.nombre === 'Pendiente').length;
 
       setStats({
         turnosTotal: turnos.length,
@@ -99,9 +99,7 @@ export default function ProfesionalDashboardPage() {
           <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">
             ¡Bienvenido, {user?.nombre}!
           </h1>
-          <p className="text-[var(--text-muted)]">
-            Panel de control de tu actividad profesional
-          </p>
+          <p className="text-[var(--text-muted)]">Panel de control de tu actividad profesional</p>
         </div>
 
         {/* Stats Grid */}
@@ -136,11 +134,29 @@ export default function ProfesionalDashboardPage() {
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[var(--text-muted)] text-sm font-semibold mb-1">Turnos Total</p>
-                  <p className="text-3xl font-bold text-[var(--text-primary)]">{stats.turnosTotal}</p>
+                  <p className="text-[var(--text-muted)] text-sm font-semibold mb-1">
+                    Turnos Total
+                  </p>
+                  <p className="text-3xl font-bold text-[var(--text-primary)]">
+                    {stats.turnosTotal}
+                  </p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center text-[var(--primary)]">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
                 </div>
               </div>
             </div>
@@ -155,7 +171,19 @@ export default function ProfesionalDashboardPage() {
                   </p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <polyline points="12 7 12 12 15 15" />
+                  </svg>
                 </div>
               </div>
             </div>
@@ -170,7 +198,20 @@ export default function ProfesionalDashboardPage() {
                   </p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
                 </div>
               </div>
             </div>
@@ -195,12 +236,21 @@ export default function ProfesionalDashboardPage() {
             className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 text-left hover:border-blue-500 hover:shadow-lg transition-all group cursor-pointer"
           >
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-3 group-hover:bg-blue-500/20 transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+              </svg>
             </div>
             <h3 className="font-bold text-[var(--text-primary)] mb-1">Mis Servicios</h3>
-            <p className="text-sm text-[var(--text-muted)]">
-              Gestioná los servicios que ofrecés
-            </p>
+            <p className="text-sm text-[var(--text-muted)]">Gestioná los servicios que ofrecés</p>
           </button>
 
           <button
@@ -208,12 +258,24 @@ export default function ProfesionalDashboardPage() {
             className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 text-left hover:border-green-500 hover:shadow-lg transition-all group cursor-pointer"
           >
             <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 mb-3 group-hover:bg-green-500/20 transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
             </div>
             <h3 className="font-bold text-[var(--text-primary)] mb-1">Mi Disponibilidad</h3>
-            <p className="text-sm text-[var(--text-muted)]">
-              Configurá tus horarios disponibles
-            </p>
+            <p className="text-sm text-[var(--text-muted)]">Configurá tus horarios disponibles</p>
           </button>
 
           <button
@@ -221,12 +283,24 @@ export default function ProfesionalDashboardPage() {
             className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 text-left hover:border-violet-500 hover:shadow-lg transition-all group cursor-pointer"
           >
             <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500 mb-3 group-hover:bg-violet-500/20 transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                <rect x="8" y="2" width="8" height="4" rx="1" />
+                <line x1="9" y1="12" x2="15" y2="12" />
+                <line x1="9" y1="16" x2="12" y2="16" />
+              </svg>
             </div>
             <h3 className="font-bold text-[var(--text-primary)] mb-1">Mis Turnos</h3>
-            <p className="text-sm text-[var(--text-muted)]">
-              Revisá y gestioná tus turnos
-            </p>
+            <p className="text-sm text-[var(--text-muted)]">Revisá y gestioná tus turnos</p>
           </button>
         </div>
       </main>

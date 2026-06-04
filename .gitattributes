@@ -1,0 +1,16 @@
+# Forzar LF en todos los archivos de texto — evita errores de Prettier en Windows
+* text=auto eol=lf
+
+# Archivos binarios — sin conversión
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary

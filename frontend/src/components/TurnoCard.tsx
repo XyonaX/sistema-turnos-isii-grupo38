@@ -14,10 +14,10 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
 
   // Determina si se puede cancelar (>= 3 hs de anticipación)
   const cancelInfo = React.useMemo(() => {
-    if (turno.estado === 'cancelado' || turno.estado === 'completado') {
+    if (turno.estadoTurno?.nombre === 'Cancelado' || turno.estadoTurno?.nombre === 'Completado') {
       return { canCancel: false, horasRestantes: 0 };
     }
-    const fecha = turno.franja?.horario?.fecha;
+    const fecha = turno.franja?.fecha;
     const horaInicio = turno.franja?.horaInicio;
     if (!fecha || !horaInicio) return { canCancel: false, horasRestantes: 0 };
 
@@ -44,7 +44,7 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
     }
   };
 
-  const fechaStr = turno.franja?.horario?.fecha ?? '';
+  const fechaStr = turno.franja?.fecha ?? '';
   const fecha = fechaStr ? new Date(fechaStr + 'T00:00:00') : new Date();
   const diaNum = fecha.getDate();
   const mes = fecha.toLocaleDateString('es-ES', { month: 'short' });
@@ -52,28 +52,28 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
-      case 'confirmado':
+      case 'Confirmado':
         return {
           bg: 'bg-green-500/10',
           border: 'border-green-500/30',
           text: 'text-green-700 dark:text-green-400',
           dot: 'bg-green-500',
         };
-      case 'pendiente':
+      case 'Pendiente':
         return {
           bg: 'bg-yellow-500/10',
           border: 'border-yellow-500/30',
           text: 'text-yellow-700 dark:text-yellow-400',
           dot: 'bg-yellow-500',
         };
-      case 'cancelado':
+      case 'Cancelado':
         return {
           bg: 'bg-red-500/10',
           border: 'border-red-500/30',
           text: 'text-red-700 dark:text-red-400',
           dot: 'bg-red-500',
         };
-      case 'completado':
+      case 'Completado':
         return {
           bg: 'bg-blue-500/10',
           border: 'border-blue-500/30',
@@ -90,7 +90,7 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
     }
   };
 
-  const estadoStyle = getEstadoBadge(turno.estado);
+  const estadoStyle = getEstadoBadge(turno.estadoTurno?.nombre ?? '');
 
   return (
     <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-alt)] border border-[var(--border)] rounded-2xl p-6 hover:shadow-lg transition-all">
@@ -124,7 +124,7 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
             className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-semibold border ${estadoStyle.bg} ${estadoStyle.border} ${estadoStyle.text} mb-3`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${estadoStyle.dot}`} />
-            <span>{turno.estado.toUpperCase()}</span>
+            <span>{(turno.estadoTurno?.nombre ?? '').toUpperCase()}</span>
           </div>
 
           {/* Notas si existen */}
@@ -136,7 +136,7 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
         </div>
 
         {/* Botón cancelar */}
-        {turno.estado !== 'cancelado' && turno.estado !== 'completado' && onCancelar && (
+        {turno.estadoTurno?.nombre !== 'Cancelado' && turno.estadoTurno?.nombre !== 'Completado' && onCancelar && (
           <div className="flex-shrink-0 flex flex-col items-end gap-1">
             <button
               onClick={cancelInfo.canCancel ? handleCancelarClick : undefined}

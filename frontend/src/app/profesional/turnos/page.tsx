@@ -53,8 +53,8 @@ function IconUser() {
 type FiltroVista = 'todos' | 'disponible' | 'reservado' | 'cancelado';
 
 function getEstadoSlot(franja: FranjaHoraria): 'disponible' | 'reservado' | 'cancelado' {
-  if (franja.disponible) return 'disponible';
-  if (franja.turno?.estado === 'cancelado') return 'cancelado';
+  if (franja.estadoFranja?.nombre === 'Libre') return 'disponible';
+  if (franja.turno?.estadoTurno?.nombre === 'Cancelado') return 'cancelado';
   return 'reservado';
 }
 
@@ -68,7 +68,9 @@ const ESTADO_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 function SlotBadge({ franja }: { franja: FranjaHoraria }) {
-  const key = franja.disponible ? 'disponible' : (franja.turno?.estado ?? 'reservado');
+  const key = franja.estadoFranja?.nombre === 'Libre'
+    ? 'disponible'
+    : (franja.turno?.estadoTurno?.nombre?.toLowerCase() ?? 'reservado');
   const cfg = ESTADO_BADGE[key] ?? {
     label: key,
     className: 'bg-gray-100 text-gray-600 border-gray-200',
@@ -133,7 +135,7 @@ export default function ProfesionalTurnosPage() {
       setFranjas((prev) =>
         prev.map((f) =>
           f.id === franjaId
-            ? { ...f, disponible: true, turno: { ...f.turno!, estado: 'cancelado' } }
+            ? { ...f, turno: { ...f.turno!, estadoTurno: { id: '', nombre: 'Cancelado' } } }
             : f
         )
       );
@@ -190,7 +192,7 @@ export default function ProfesionalTurnosPage() {
   // Agrupar por fecha
   const porFecha: Record<string, FranjaHoraria[]> = {};
   for (const f of franjasFiltradas) {
-    const fecha = f.horario?.fecha ?? 'sin-fecha';
+    const fecha = f.fecha ?? 'sin-fecha';
     if (!porFecha[fecha]) porFecha[fecha] = [];
     porFecha[fecha].push(f);
   }
@@ -300,7 +302,7 @@ export default function ProfesionalTurnosPage() {
                       year: 'numeric',
                     })
                   : 'Sin fecha';
-              const servicio = items[0]?.horario?.servicio?.nombre ?? '';
+              const servicioNombre = items[0]?.horario?.servicio?.nombre ?? '';
 
               return (
                 <div key={fecha}>
@@ -309,11 +311,11 @@ export default function ProfesionalTurnosPage() {
                     <p className="text-sm font-bold text-[var(--text-primary)] capitalize">
                       {fechaLabel}
                     </p>
-                    {servicio && (
+                    {servicioNombre && (
                       <>
                         <span className="text-[var(--border)]">·</span>
                         <span className="text-xs font-medium text-[var(--text-muted)] bg-[var(--bg)] border border-[var(--border)] px-2 py-0.5 rounded-full">
-                          {servicio}
+                          {servicioNombre}
                         </span>
                       </>
                     )}

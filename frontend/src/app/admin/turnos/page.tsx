@@ -136,7 +136,7 @@ export default function AdminTurnosPage() {
               </thead>
               <tbody>
                 {turnos.map((t) => {
-                  const estadoStyle = getEstadoBadge(t.estado);
+                  const estadoStyle = getEstadoBadge(t.estadoTurno.nombre);
                   return (
                     <tr
                       key={t.id}
@@ -166,11 +166,11 @@ export default function AdminTurnosPage() {
                         <span
                           className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold border ${estadoStyle.bg} ${estadoStyle.border} ${estadoStyle.text}`}
                         >
-                          {t.estado.toUpperCase()}
+                          {t.estadoTurno.nombre.toUpperCase()}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        {t.estado !== 'cancelado' && (
+                        {t.estadoTurno.id !== 'cancelado' && (
                           <button
                             onClick={() => cancelar(t.id)}
                             className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold rounded-lg transition-all"

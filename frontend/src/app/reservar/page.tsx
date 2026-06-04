@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Navbar } from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-import type { FranjaHoraria, Servicio } from '../../types';
+import type { FranjaHoraria } from '../../types';
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 
@@ -127,8 +127,8 @@ interface ModalProps {
 
 function ModalConfirmar({ franja, onConfirm, onClose, loading }: ModalProps) {
   const [notas, setNotas] = useState('');
-  const servicio = franja.horario?.servicio;
-  const fecha = franja.horario?.fecha ?? '';
+  const profesional = franja.horario?.servicio?.profesional;
+  const fecha = franja.fecha ?? '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -156,59 +156,13 @@ function ModalConfirmar({ franja, onConfirm, onClose, loading }: ModalProps) {
               {franja.horaInicio} – {franja.horaFin}
             </span>
           </div>
-          {servicio && (
-            <>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-[var(--text-muted)]">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                  </svg>
-                </span>
-                <span className="text-[var(--text-primary)] font-medium">{servicio.nombre}</span>
-                <span className="text-xs text-[var(--text-muted)]">· {servicio.duracion} min</span>
-              </div>
-              {servicio.profesional && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-[var(--text-muted)]">
-                    <IconUser />
-                  </span>
-                  <span className="text-[var(--text-secondary)]">
-                    {servicio.profesional.nombre}
-                  </span>
-                </div>
-              )}
-              {servicio.precio !== null && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-[var(--text-muted)]">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="12" y1="1" x2="12" y2="23" />
-                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                    </svg>
-                  </span>
-                  <span className="text-[var(--text-primary)] font-semibold">
-                    ${Number(servicio.precio).toFixed(2)}
-                  </span>
-                </div>
-              )}
-            </>
+          {profesional && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-[var(--text-muted)]">
+                <IconUser />
+              </span>
+              <span className="text-[var(--text-secondary)]">{profesional.nombre}</span>
+            </div>
           )}
         </div>
 
@@ -285,7 +239,6 @@ export default function ReservarPage() {
 
   // Filtros
   const [busqueda, setBusqueda] = useState('');
-  const [servicioSeleccionado, setServicioSeleccionado] = useState<string>('todos');
 
   // Reserva
   const [franjaModal, setFranjaModal] = useState<FranjaHoraria | null>(null);
@@ -326,36 +279,24 @@ export default function ReservarPage() {
     }
   };
 
-  // Extraer servicios únicos de las franjas
-  const servicios: Servicio[] = useMemo(() => {
-    const mapa = new Map<string, Servicio>();
-    for (const f of franjas) {
-      const s = f.horario?.servicio;
-      if (s && !mapa.has(s.id)) mapa.set(s.id, s);
-    }
-    return Array.from(mapa.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [franjas]);
-
-  // Filtrar franjas según servicio y búsqueda
+  // Filtrar franjas: solo LIBRES, opcionalmente por búsqueda de nombre de profesional
   const franjasFiltradas = useMemo(() => {
     return franjas.filter((f) => {
-      const s = f.horario?.servicio;
-      if (!s) return false;
-      if (servicioSeleccionado !== 'todos' && s.id !== servicioSeleccionado) return false;
+      if (f.estadoFranja?.nombre !== 'Libre') return false;
       if (busqueda) {
         const q = busqueda.toLowerCase();
-        if (!s.nombre.toLowerCase().includes(q) && !s.profesional?.nombre.toLowerCase().includes(q))
-          return false;
+        const nombreProfesional = f.horario?.servicio?.profesional?.nombre?.toLowerCase() ?? '';
+        if (!nombreProfesional.includes(q)) return false;
       }
       return true;
     });
-  }, [franjas, servicioSeleccionado, busqueda]);
+  }, [franjas, busqueda]);
 
   // Agrupar por fecha
   const porFecha = useMemo(() => {
     const mapa: Record<string, FranjaHoraria[]> = {};
     for (const f of franjasFiltradas) {
-      const fecha = f.horario?.fecha ?? '';
+      const fecha = f.fecha ?? '';
       if (!mapa[fecha]) mapa[fecha] = [];
       mapa[fecha].push(f);
     }
@@ -370,7 +311,7 @@ export default function ReservarPage() {
     try {
       await api.post('/turnos', { franjaId: franjaModal.id, notas: notas || undefined });
       setReservaExitosa(
-        `Turno reservado para el ${formatFechaLarga(franjaModal.horario?.fecha ?? '')} a las ${franjaModal.horaInicio}`
+        `Turno reservado para el ${formatFechaLarga(franjaModal.fecha ?? '')} a las ${franjaModal.horaInicio}`
       );
       setFranjaModal(null);
       // Recargar para quitar la franja reservada
@@ -449,7 +390,7 @@ export default function ReservarPage() {
 
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          {/* Búsqueda */}
+          {/* Búsqueda por profesional */}
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
               <IconSearch />
@@ -458,27 +399,10 @@ export default function ReservarPage() {
               type="text"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por servicio o profesional..."
+              placeholder="Buscar por profesional..."
               className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
             />
           </div>
-
-          {/* Filtro por servicio */}
-          <select
-            value={servicioSeleccionado}
-            onChange={(e) => setServicioSeleccionado(e.target.value)}
-            className="px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 cursor-pointer"
-          >
-            <option value="todos">Todos los servicios ({franjas.length} turnos)</option>
-            {servicios.map((s) => {
-              const count = franjas.filter((f) => f.horario?.servicio?.id === s.id).length;
-              return (
-                <option key={s.id} value={s.id}>
-                  {s.nombre} ({count} turnos)
-                </option>
-              );
-            })}
-          </select>
         </div>
 
         {/* Contenido */}
@@ -527,16 +451,13 @@ export default function ReservarPage() {
               Sin turnos disponibles
             </h3>
             <p className="text-sm text-[var(--text-muted)]">
-              {busqueda || servicioSeleccionado !== 'todos'
+              {busqueda
                 ? 'No hay turnos que coincidan con tu búsqueda.'
                 : 'No hay turnos disponibles en los próximos 30 días.'}
             </p>
-            {(busqueda || servicioSeleccionado !== 'todos') && (
+            {busqueda && (
               <button
-                onClick={() => {
-                  setBusqueda('');
-                  setServicioSeleccionado('todos');
-                }}
+                onClick={() => setBusqueda('')}
                 className="mt-4 text-sm text-[var(--primary)] underline cursor-pointer"
               >
                 Limpiar filtros
@@ -576,7 +497,8 @@ export default function ReservarPage() {
                   {/* Grid de slots */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {items.map((franja) => {
-                      const s = franja.horario?.servicio;
+                      const servicio = franja.horario?.servicio;
+                      const prof = servicio?.profesional;
                       return (
                         <div
                           key={franja.id}
@@ -587,38 +509,29 @@ export default function ReservarPage() {
                             <span className="text-base font-bold text-[var(--text-primary)]">
                               {franja.horaInicio} – {franja.horaFin}
                             </span>
-                            {s?.precio !== null && (
-                              <span className="text-sm font-bold text-[var(--primary)]">
-                                ${Number(s?.precio).toFixed(2)}
-                              </span>
-                            )}
                           </div>
 
-                          {/* Servicio y profesional */}
-                          {s && (
-                            <div className="space-y-1 mb-4">
-                              <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                                <span className="text-[var(--text-muted)]">
-                                  <svg
-                                    width="12"
-                                    height="12"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                                  </svg>
-                                </span>
-                                <span className="font-medium">{s.nombre}</span>
-                                <span className="text-[var(--text-muted)]">· {s.duracion} min</span>
-                              </div>
-                              {s.profesional && (
+                          {/* Profesional y servicio */}
+                          {(prof || servicio) && (
+                            <div className="space-y-2 mb-4">
+                              {prof && (
                                 <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
                                   <IconUser />
-                                  <span>{s.profesional.nombre}</span>
+                                  <span>{prof.nombre}</span>
+                                </div>
+                              )}
+                              {servicio && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-[11px] font-medium"
+                                  >
+                                    {servicio.nombre}
+                                    {servicio.precio != null && (
+                                      <span className="text-[var(--text-muted)] font-normal">
+                                        · ${servicio.precio}
+                                      </span>
+                                    )}
+                                  </span>
                                 </div>
                               )}
                             </div>

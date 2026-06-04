@@ -92,7 +92,8 @@ export default function AdminHorariosPage() {
 
     try {
       await api.post('/horarios', {
-        fecha,
+        fechaInicio: fecha,
+        fechaFin: fecha,
         horaInicio,
         horaFin,
       });
@@ -430,8 +431,10 @@ export default function AdminHorariosPage() {
                 {/* Agrupar por fecha */}
                 {Object.entries(
                   horarios.reduce((acc: Record<string, Horario[]>, h) => {
-                    if (!acc[h.fecha]) acc[h.fecha] = [];
-                    acc[h.fecha].push(h);
+                    const fechaKey = h.horario?.fecha ?? '';
+                    if (!fechaKey) return acc;
+                    if (!acc[fechaKey]) acc[fechaKey] = [];
+                    acc[fechaKey].push(h);
                     return acc;
                   }, {})
                 )
@@ -476,12 +479,12 @@ export default function AdminHorariosPage() {
                                 <button
                                   onClick={() => toggle(h.id)}
                                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                    h.disponible
+                                    h.estado === 'LIBRE'
                                       ? 'bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-600 dark:text-green-400'
                                       : 'bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400'
                                   }`}
                                 >
-                                  {h.disponible ? '✓ Disponible' : '⏸ Bloqueado'}
+                                  {h.estado === 'LIBRE' ? '✓ Disponible' : '⏸ Bloqueado'}
                                 </button>
                                 <button
                                   onClick={() => cancelar(h.id)}
