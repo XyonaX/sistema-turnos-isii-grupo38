@@ -26,8 +26,8 @@ export const isAuthenticated = (req: AuthRequest, res: Response, next: NextFunct
 };
 
 export const isProfesional = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  if (req.user?.rol !== 'profesional') {
-    res.status(403).json({ message: 'Acceso denegado: se requiere rol profesional' });
+  if (req.user?.rol?.toLowerCase() !== 'profesional') {
+    res.status(403).json({ message: 'Acceso denegado' });
     return;
   }
   next();

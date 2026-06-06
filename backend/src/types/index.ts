@@ -28,32 +28,19 @@ export interface FranjaHoraria {
     id: string;
     nombre: string;
   };
+}
+
+export interface Horario {
+  id: string;
+  horaInicio: string;
+  horaFin: string;
+  estadoFranja?: { id: string; nombre: string };
   horario?: {
-    id: string;
-    fechaInicio: string;
-    fechaFin: string;
-    horaApertura: string;
-    horaCierre: string;
+    id?: string;
+    fecha: string;
     servicio?: {
       id: string;
       nombre: string;
-      duracionMinutos: number;
-      precio?: number;
-      profesional?: {
-        id: string;
-        nombre: string;
-        email: string;
-      };
-    };
-  };
-  turno?: {
-    id: string;
-    estadoTurno?: { id: string; nombre: string };
-    notas?: string;
-    cliente?: {
-      id: string;
-      nombre: string;
-      email: string;
     };
   };
 }
@@ -71,16 +58,4 @@ export interface Turno {
 
 export interface AuthResponse {
   token: string;
-}
-
-/** @deprecated Use FranjaHoraria instead. */
-export interface Horario {
-  id: string;
-  horaInicio: string;
-  horaFin: string;
-  estadoFranja?: { id: string; nombre: string };
-  horario?: {
-    id?: string;
-    fecha: string;
-  };
 }

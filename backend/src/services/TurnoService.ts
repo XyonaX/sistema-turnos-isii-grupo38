@@ -1,54 +1,80 @@
+// src/services/TurnoService.ts
 import { AppDataSource } from '../config/database';
-import { FranjaHoraria } from '../entities/FranjaHoraria';
-import { Turno } from '../entities/Turno';
-import { Notificacion } from '../entities/Notificacion';
-import { ESTADO_FRANJA, ESTADO_TURNO, TIPO_NOTIFICACION } from '../constants/catalog';
+import { Turno as TurnoEntity } from '../entities/Turno';
+import { FranjaHoraria as FranjaEntity } from '../entities/FranjaHoraria';
+import { ESTADO_FRANJA, ESTADO_TURNO } from '../constants/catalog';
 import {
   getEstadoFranjaId,
   getEstadoTurnoId,
-  getTipoNotificacionId,
 } from '../repositories/catalogRepository';
+
+// IMPORTAMOS TUS CLASES PURAS
+import { Turno } from '../clases/Turno';
+import { Usuario } from '../clases/Usuario';
+import { Rol } from '../clases/Rol';
 
 const TURNO_RELATIONS = {
   relations: {
-    cliente: true,
+    cliente: { rol: true },
     franja: { horario: { servicio: { profesional: true } }, estadoFranja: true },
     estadoTurno: true,
-    notificaciones: { tipoNotificacion: true },
   },
 } as const;
 
 export class TurnoService {
-  private turnoRepo = AppDataSource.getRepository(Turno);
-  private franjaRepo = AppDataSource.getRepository(FranjaHoraria);
-  private notificacionRepo = AppDataSource.getRepository(Notificacion);
+  private turnoRepo = AppDataSource.getRepository(TurnoEntity);
 
-  async reservar(clienteId: string, franjaId: string, notas?: string): Promise<Turno> {
+  // =========================================================================
+  // HELPER: Convierte una Entity de TypeORM en tu Clase Pura de Dominio
+  // =========================================================================
+  private mapearAClaseDominio(entity: TurnoEntity): Turno {
+    const rolDominio = new Rol(
+      entity.cliente?.rol?.nombre || '',
+      entity.cliente?.rol?.descripcion || '',
+      entity.cliente?.rol?.id
+    );
+
+    const usuarioDominio = new Usuario(
+      entity.cliente?.nombre || '',
+      entity.cliente?.email || '',
+      '', 
+      rolDominio,
+      entity.cliente?.id
+    );
+
+    return new Turno(
+      usuarioDominio,
+      entity.estadoTurno?.nombre || '',
+      entity.notas,
+      entity.creadoEn,
+      entity.id
+    );
+  }
+
+  // =========================================================================
+  // MÉTODOS DEL SERVICIO
+  // =========================================================================
+
+  async reservar(clienteId: string, franjaId: string, notas?: string): Promise<TurnoEntity> {
     const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
     const estadoOcupadaId = await getEstadoFranjaId(ESTADO_FRANJA.OCUPADA);
     const estadoPendienteId = await getEstadoTurnoId(ESTADO_TURNO.PENDIENTE);
-    const tipoConfirmacionId = await getTipoNotificacionId(TIPO_NOTIFICACION.CONFIRMACION);
 
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      const franja = await queryRunner.manager.findOne(FranjaHoraria, {
+      const franja = await queryRunner.manager.findOne(FranjaEntity, {
         where: { id: franjaId },
         relations: { estadoFranja: true },
         lock: { mode: 'pessimistic_write' },
       });
 
-      if (!franja) {
-        throw new Error('Franja horaria no encontrada');
-      }
+      if (!franja) throw new Error('Franja horaria no encontrada');
+      if (franja.estadoFranja.id !== estadoLibreId) throw new Error('Franja horaria no disponible');
 
-      if (franja.estadoFranja.id !== estadoLibreId) {
-        throw new Error('Franja horaria no disponible');
-      }
-
-      const turno = queryRunner.manager.create(Turno, {
+      const turno = queryRunner.manager.create(TurnoEntity, {
         cliente: { id: clienteId },
         franja: { id: franjaId },
         estadoTurno: { id: estadoPendienteId },
@@ -59,14 +85,6 @@ export class TurnoService {
 
       franja.estadoFranja = { id: estadoOcupadaId } as any;
       await queryRunner.manager.save(franja);
-
-      const notificacion = queryRunner.manager.create(Notificacion, {
-        turno: { id: savedTurno.id },
-        tipoNotificacion: { id: tipoConfirmacionId },
-        mensaje: 'Turno reservado correctamente',
-        leida: false,
-      });
-      await queryRunner.manager.save(notificacion);
 
       await queryRunner.commitTransaction();
 
@@ -82,9 +100,8 @@ export class TurnoService {
     }
   }
 
-  async getMisTurnos(clienteId: string): Promise<Turno[]> {
+  async getMisTurnos(clienteId: string): Promise<TurnoEntity[]> {
     await this.actualizarTurnosCompletados();
-
     return this.turnoRepo.find({
       where: { cliente: { id: clienteId } },
       order: { creadoEn: 'ASC' },
@@ -92,148 +109,75 @@ export class TurnoService {
     });
   }
 
-  private async actualizarTurnosCompletados(): Promise<void> {
-    const ahora = new Date();
-    const estadoCompletadoId = await getEstadoTurnoId(ESTADO_TURNO.COMPLETADO);
-
-    const turnosPendientes = await this.turnoRepo.find({
-      where: [
-        { estadoTurno: { nombre: ESTADO_TURNO.PENDIENTE } },
-        { estadoTurno: { nombre: ESTADO_TURNO.CONFIRMADO } },
-      ],
-      relations: { franja: true, estadoTurno: true },
-    });
-
-    for (const turno of turnosPendientes) {
-      if (!turno.franja) continue;
-      const [horas, minutos] = turno.franja.horaFin.split(':').map(Number);
-      const fechaStr: string =
-        typeof turno.franja.fecha === 'string'
-          ? turno.franja.fecha
-          : (turno.franja.fecha as unknown as Date).toISOString().substring(0, 10);
-      const [year, month, day] = fechaStr.substring(0, 10).split('-').map(Number);
-      const fechaTurno = new Date(year, month - 1, day, horas, minutos, 0, 0);
-
-      if (fechaTurno < ahora) {
-        turno.estadoTurno = { id: estadoCompletadoId } as any;
-        await this.turnoRepo.save(turno);
-      }
-    }
-  }
-
-  async cancelar(turnoId: string, clienteId?: string): Promise<Turno> {
-    const estadoCanceladoId = await getEstadoTurnoId(ESTADO_TURNO.CANCELADO);
-    const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
-    const tipoCancelacionId = await getTipoNotificacionId(TIPO_NOTIFICACION.CANCELACION);
-
-    const turno = await this.turnoRepo.findOne({
+  async cancelar(turnoId: string, clienteId?: string): Promise<TurnoEntity> {
+    const turnoEntity = await this.turnoRepo.findOne({
       where: clienteId ? { id: turnoId, cliente: { id: clienteId } } : { id: turnoId },
       ...TURNO_RELATIONS,
     });
 
-    if (!turno) {
-      throw new Error('Turno no encontrado');
-    }
+    if (!turnoEntity) throw new Error('Turno no encontrado');
 
-    if (turno.estadoTurno.nombre === ESTADO_TURNO.CANCELADO) {
-      throw new Error('El turno ya está cancelado');
-    }
-
-    if (clienteId) {
-      const fechaRaw = turno.franja?.fecha;
-      const horaInicio = turno.franja?.horaInicio;
-      if (fechaRaw && horaInicio) {
-        const [h, m] = horaInicio.split(':').map(Number);
-        const fechaStr: string =
-          typeof fechaRaw === 'string'
-            ? fechaRaw
-            : (fechaRaw as unknown as Date).toISOString().substring(0, 10);
-        const [year, month, day] = fechaStr.substring(0, 10).split('-').map(Number);
-        const turnoDate = new Date(year, month - 1, day, h, m, 0, 0);
-        const diffMs = turnoDate.getTime() - Date.now();
-        if (diffMs < 3 * 60 * 60 * 1000) {
-          throw new Error('No se puede cancelar el turno con menos de 3 horas de anticipación');
-        }
+    // Regla de anticipación de tiempo mínima para cancelar
+    if (clienteId && turnoEntity.franja?.fecha && turnoEntity.franja?.horaInicio) {
+      const [h, m] = turnoEntity.franja.horaInicio.split(':').map(Number);
+      const fechaStr = typeof turnoEntity.franja.fecha === 'string' 
+        ? turnoEntity.franja.fecha 
+        : (turnoEntity.franja.fecha as any).toISOString().substring(0, 10);
+      const [year, month, day] = fechaStr.split('-').map(Number);
+      const turnoDate = new Date(year, month - 1, day, h, m);
+      
+      if (turnoDate.getTime() - Date.now() < 3 * 60 * 60 * 1000) {
+        throw new Error('No se puede cancelar el turno con menos de 3 horas de anticipación');
       }
     }
 
-    const franjaId = turno.franja?.id;
+    // INTERACCIÓN CON EL DOMINIO
+    const turnoDominio = this.mapearAClaseDominio(turnoEntity);
+    turnoDominio.cancelar(clienteId ? 'Cliente' : 'Profesional');
 
-    turno.estadoTurno = { id: estadoCanceladoId } as any;
-    await this.turnoRepo.save(turno);
+    // PERSISTENCIA
+    turnoEntity.notas = turnoDominio.obtenerNotas();
+    const nuevoEstadoId = await getEstadoTurnoId(turnoDominio.obtenerNombreEstado());
+    turnoEntity.estadoTurno = { id: nuevoEstadoId } as any;
 
-    if (franjaId) {
-      await this.franjaRepo.update(
-        { id: franjaId },
-        { estadoFranja: { id: estadoLibreId } as any }
-      );
-    }
+    await this.turnoRepo.save(turnoEntity);
 
-    const notificacion = this.notificacionRepo.create({
-      turno: { id: turnoId },
-      tipoNotificacion: { id: tipoCancelacionId },
-      mensaje: 'Turno cancelado',
-      leida: false,
-    });
-    await this.notificacionRepo.save(notificacion);
-
-    return this.turnoRepo.findOneOrFail({
-      where: { id: turno.id },
-      ...TURNO_RELATIONS,
-    });
+    return this.turnoRepo.findOneOrFail({ where: { id: turnoEntity.id }, ...TURNO_RELATIONS });
   }
 
-  async cancelarProfesional(turnoId: string, profesionalId: string): Promise<Turno> {
-    const estadoCanceladoId = await getEstadoTurnoId(ESTADO_TURNO.CANCELADO);
-    const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
-    const tipoCancelacionId = await getTipoNotificacionId(TIPO_NOTIFICACION.CANCELACION);
-
-    const turno = await this.turnoRepo.findOne({
+  async cancelarProfesional(turnoId: string, profesionalId: string): Promise<TurnoEntity> {
+    const turnoEntity = await this.turnoRepo.findOne({
       where: { id: turnoId },
       ...TURNO_RELATIONS,
     });
 
-    if (!turno) {
-      throw new Error('Turno no encontrado');
-    }
+    if (!turnoEntity) throw new Error('Turno no encontrado');
 
-    if (turno.franja?.horario?.servicio?.profesional?.id !== profesionalId) {
+    if (turnoEntity.franja?.horario?.servicio?.profesional?.id !== profesionalId) {
       throw new Error('No tenés permiso para cancelar este turno');
     }
 
-    if (turno.estadoTurno.nombre === ESTADO_TURNO.CANCELADO) {
-      throw new Error('El turno ya está cancelado');
-    }
+    // INTERACCIÓN CON EL DOMINIO
+    const turnoDominio = this.mapearAClaseDominio(turnoEntity);
+    turnoDominio.cancelar('Profesional');
 
-    const franjaId = turno.franja!.id;
+    // PERSISTENCIA
+    turnoEntity.notas = turnoDominio.obtenerNotas();
+    const nuevoEstadoId = await getEstadoTurnoId(turnoDominio.obtenerNombreEstado());
+    turnoEntity.estadoTurno = { id: nuevoEstadoId } as any;
+    await this.turnoRepo.save(turnoEntity);
 
-    turno.estadoTurno = { id: estadoCanceladoId } as any;
-    await this.turnoRepo.save(turno);
-
-    await this.franjaRepo.update({ id: franjaId }, { estadoFranja: { id: estadoLibreId } as any });
-
-    const notificacion = this.notificacionRepo.create({
-      turno: { id: turnoId },
-      tipoNotificacion: { id: tipoCancelacionId },
-      mensaje: 'Turno cancelado por el profesional',
-      leida: false,
-    });
-    await this.notificacionRepo.save(notificacion);
-
-    return this.turnoRepo.findOneOrFail({
-      where: { id: turno.id },
-      ...TURNO_RELATIONS,
-    });
+    return this.turnoRepo.findOneOrFail({ where: { id: turnoEntity.id }, ...TURNO_RELATIONS });
   }
 
-  async getTodos(): Promise<Turno[]> {
+  async getTodos(): Promise<TurnoEntity[]> {
     return this.turnoRepo.find({
       order: { creadoEn: 'DESC' },
       ...TURNO_RELATIONS,
     });
   }
 
-  async getTurnosByProfesional(profesionalId: string): Promise<Turno[]> {
+  async getTurnosByProfesional(profesionalId: string): Promise<TurnoEntity[]> {
     return this.turnoRepo
       .createQueryBuilder('turno')
       .leftJoinAndSelect('turno.franja', 'franja')
@@ -242,6 +186,7 @@ export class TurnoService {
       .leftJoinAndSelect('horario.servicio', 'servicio')
       .leftJoinAndSelect('servicio.profesional', 'profesional')
       .leftJoinAndSelect('turno.cliente', 'cliente')
+      .leftJoinAndSelect('cliente.rol', 'rol')
       .leftJoinAndSelect('turno.estadoTurno', 'estadoTurno')
       .where('profesional.id = :profesionalId', { profesionalId })
       .orderBy('franja.fecha', 'DESC')
@@ -249,19 +194,40 @@ export class TurnoService {
       .getMany();
   }
 
-  async getTurnosByCliente(clienteId: string): Promise<Turno[]> {
-    return this.turnoRepo.find({
-      where: { cliente: { id: clienteId } },
-      ...TURNO_RELATIONS,
-    });
-  }
+  // LÓGICA AUTOMÁTICA EN SEGUNDO PLANO
+  private async actualizarTurnosCompletados(): Promise<void> {
+    const ahora = new Date();
 
-  async getTurnoById(id: string): Promise<Turno> {
-    const turno = await this.turnoRepo.findOne({
-      where: { id },
-      ...TURNO_RELATIONS,
+    const turnosAValidad = await this.turnoRepo.find({
+      where: [
+        { estadoTurno: { nombre: ESTADO_TURNO.PENDIENTE } },
+        { estadoTurno: { nombre: ESTADO_TURNO.CONFIRMADO } },
+      ],
+      relations: { franja: true, estadoTurno: true, cliente: { rol: true } },
     });
-    if (!turno) throw new Error('Turno no encontrado');
-    return turno;
+
+    for (const entity of turnosAValidad) {
+      if (!entity.franja) continue;
+
+      const [horas, minutos] = entity.franja.horaFin.split(':').map(Number);
+      const fechaStr = typeof entity.franja.fecha === 'string'
+        ? entity.franja.fecha
+        : (entity.franja.fecha as any).toISOString().substring(0, 10);
+      const [year, month, day] = fechaStr.split('-').map(Number);
+      const fechaTurno = new Date(year, month - 1, day, horas, minutos);
+
+      if (fechaTurno < ahora) {
+        const turnoDominio = this.mapearAClaseDominio(entity);
+        
+        try {
+          turnoDominio.completar();
+          const nuevoEstadoId = await getEstadoTurnoId(turnoDominio.obtenerNombreEstado());
+          entity.estadoTurno = { id: nuevoEstadoId } as any;
+          await this.turnoRepo.save(entity);
+        } catch (e) {
+          continue;
+        }
+      }
+    }
   }
 }
