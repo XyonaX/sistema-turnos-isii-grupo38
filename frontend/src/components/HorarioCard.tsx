@@ -46,7 +46,7 @@ export function HorarioCard({
     }
   };
 
-  const fechaStr = horario.horario?.fecha ?? '';
+  const fechaStr = horario.fecha ?? '';
   const fecha = fechaStr ? new Date(fechaStr + 'T00:00:00') : new Date();
   const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'long' });
   const diaNum = fecha.getDate();

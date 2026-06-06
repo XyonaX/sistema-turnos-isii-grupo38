@@ -15,6 +15,7 @@ interface AuthUser {
 
 interface AuthContextValue {
   isAuthenticated: boolean;
+  isLoading: boolean;
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -22,6 +23,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue>({
   isAuthenticated: false,
+  isLoading: true,
   user: null,
   login: async () => {},
   logout: () => {},
@@ -40,50 +42,51 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
+function getUserFromToken(token: string): AuthUser | null {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return null;
+  return {
+    id: typeof payload['id'] === 'string' ? payload['id'] : '',
+    nombre:
+      typeof payload['nombre'] === 'string'
+        ? payload['nombre']
+        : typeof payload['name'] === 'string'
+          ? payload['name']
+          : '',
+    email: typeof payload['email'] === 'string' ? payload['email'] : '',
+    rol: typeof payload['rol'] === 'string' ? payload['rol'].toLowerCase() : 'cliente',
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Iniciar siempre en false/null para evitar hydration mismatch
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  // Función para actualizar el estado basado en localStorage
-  const updateAuthState = () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setIsAuthenticated(false);
-      setUser(null);
-      return;
-    }
-
-    setIsAuthenticated(true);
-
-    const payload = decodeJwtPayload(token);
-    if (payload) {
-      const id = typeof payload['id'] === 'string' ? payload['id'] : '';
-      const nombre =
-        typeof payload['nombre'] === 'string'
-          ? payload['nombre']
-          : typeof payload['name'] === 'string'
-            ? payload['name']
-            : '';
-      const email = typeof payload['email'] === 'string' ? payload['email'] : '';
-      const rol = typeof payload['rol'] === 'string' ? payload['rol'] : 'cliente';
-      setUser({ id, nombre, email, rol });
-    } else {
-      // Si el token no es válido, limpiar
-      setIsAuthenticated(false);
-      setUser(null);
-    }
-  };
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Actualizar estado inicial
-    updateAuthState();
-    setMounted(true);
+    // Leer localStorage solo en el cliente
+    const token = localStorage.getItem('token');
+    if (token) {
+      const userData = getUserFromToken(token);
+      if (userData) {
+        setIsAuthenticated(true);
+        setUser(userData);
+      }
+    }
+    setIsLoading(false);
 
-    // Escuchar cambios de localStorage (de otra pestaña)
     const handleStorageChange = () => {
-      updateAuthState();
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsAuthenticated(false);
+        setUser(null);
+      } else {
+        setIsAuthenticated(true);
+        setUser(getUserFromToken(token));
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -91,38 +94,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await authService.login(email, password);
-    setIsAuthenticated(true);
-
-    // Decodificar el token y extraer el usuario
+    await authService.login(email, password);
     const token = localStorage.getItem('token');
     if (token) {
-      const payload = decodeJwtPayload(token);
-      if (payload) {
-        const id = typeof payload['id'] === 'string' ? payload['id'] : '';
-        const nombre =
-          typeof payload['nombre'] === 'string'
-            ? payload['nombre']
-            : typeof payload['name'] === 'string'
-              ? payload['name']
-              : '';
-        const userEmail = typeof payload['email'] === 'string' ? payload['email'] : '';
-        const rol = typeof payload['rol'] === 'string' ? payload['rol'] : 'cliente';
-        setUser({ id, nombre, email: userEmail, rol });
-      }
+      const userData = getUserFromToken(token);
+      setIsAuthenticated(true);
+      setUser(userData);
     }
   };
 
   const logout = () => {
     authService.logout();
-    // Actualizar el estado inmediatamente
     setIsAuthenticated(false);
     setUser(null);
     router.push('/');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
