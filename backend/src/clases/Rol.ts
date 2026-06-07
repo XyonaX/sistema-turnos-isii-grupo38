@@ -11,7 +11,7 @@ export class Rol {
     this.descripcion = descripcion;
   }
 
-  // Métodos de comportamiento (Lógica pura de objetos)
+  // Métodos de comportamiento 
   public obtenerNombre(): string {
     return this.nombre;
   }

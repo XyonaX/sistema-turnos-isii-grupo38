@@ -1,4 +1,4 @@
-// src/clases/Servicio.ts
+
 import { Usuario } from './Usuario';
 
 export class Servicio {
@@ -8,7 +8,7 @@ export class Servicio {
   private descripcion?: string;
   private duracionMinutos: number;
   private precio: number;
-  private profesional: Usuario; // Composición de objetos puros
+  private profesional: Usuario; 
 
   constructor(
     nombre: string, 
@@ -30,7 +30,7 @@ export class Servicio {
   }
 
   // =========================================================================
-  // GETTERS (Encapsulamiento puro)
+  // GETTERS 
   // =========================================================================
   public obtenerId(): string | undefined { return this.id; }
   public obtenerNombre(): string { return this.nombre; }
@@ -53,7 +53,7 @@ export class Servicio {
       throw new Error('El precio del servicio no puede ser un valor negativo');
     }
     
-    // Aprovechamos el método que creamos en el Paso 2 dentro de Usuario
+    
     if (!this.profesional.puedeOfrecerServicios()) {
       throw new Error('Solo los profesionales pueden crear o tener servicios asignados');
     }
