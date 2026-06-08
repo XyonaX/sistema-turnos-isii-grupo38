@@ -1,7 +1,7 @@
 import { AppDataSource } from '../config/database';
 import { EstadoFranja } from '../entities/EstadoFranja';
 import { EstadoTurno } from '../entities/EstadoTurno';
-
+import { TipoNotificacion } from '../entities/TipoNotificacion';
 
 // In-memory cache so catalog lookups only hit DB once per process lifetime
 const cache: Record<string, string> = {};
@@ -24,3 +24,6 @@ export async function getEstadoTurnoId(nombre: string): Promise<string> {
   return getIdByNombre(EstadoTurno, 'estados_turno', nombre);
 }
 
+export async function getTipoNotificacionId(nombre: string): Promise<string> {
+  return getIdByNombre(TipoNotificacion, 'tipos_notificacion', nombre);
+}
