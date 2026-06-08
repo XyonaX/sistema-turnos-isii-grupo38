@@ -27,11 +27,10 @@ const api = {
   delete(url: string, config?: any) {
     return this.request({ ...config, url, method: 'DELETE' });
   },
-  
-  patch(url: string, data?: any, config?: any) {
-  return this.request({ ...config, url, data, method: 'PATCH' });
-},
-};
 
+  patch(url: string, data?: any, config?: any) {
+    return this.request({ ...config, url, data, method: 'PATCH' });
+  },
+};
 
 export default api;

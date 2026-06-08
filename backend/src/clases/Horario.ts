@@ -8,7 +8,13 @@ export class Horario {
   private horaApertura: string;
   private horaCierre: string;
 
-  constructor(fechaInicio: string, fechaFin: string, horaApertura: string, horaCierre: string, id?: string) {
+  constructor(
+    fechaInicio: string,
+    fechaFin: string,
+    horaApertura: string,
+    horaCierre: string,
+    id?: string
+  ) {
     this.id = id;
     this.fechaInicio = fechaInicio;
     this.fechaFin = fechaFin;
@@ -22,11 +28,21 @@ export class Horario {
   // =========================================================================
   // GETTERS (Encapsulamiento de datos)
   // =========================================================================
-  public obtenerId(): string | undefined { return this.id; }
-  public obtenerFechaInicio(): string { return this.fechaInicio; }
-  public obtenerFechaFin(): string { return this.fechaFin; }
-  public obtenerHoraApertura(): string { return this.horaApertura; }
-  public obtenerHoraCierre(): string { return this.horaCierre; }
+  public obtenerId(): string | undefined {
+    return this.id;
+  }
+  public obtenerFechaInicio(): string {
+    return this.fechaInicio;
+  }
+  public obtenerFechaFin(): string {
+    return this.fechaFin;
+  }
+  public obtenerHoraApertura(): string {
+    return this.horaApertura;
+  }
+  public obtenerHoraCierre(): string {
+    return this.horaCierre;
+  }
 
   // =========================================================================
   // REGLAS DE NEGOCIO EN MEMORIA
@@ -52,16 +68,18 @@ export class Horario {
   }
 
   // ALGORITMO PURO: Divide el rango de atención en bloques según los minutos del servicio
-  public calcularFranjasHorarias(duracionMinutos: number): Array<{ fecha: string; horaInicio: string; horaFin: string }> {
+  public calcularFranjasHorarias(
+    duracionMinutos: number
+  ): Array<{ fecha: string; horaInicio: string; horaFin: string }> {
     if (duracionMinutos <= 0) {
       throw new Error('La duración del servicio debe ser positiva');
     }
 
     const franjasCalculadas = [];
-    
+
     const [y1, m1, d1] = this.fechaInicio.split('-').map(Number);
     const fechaActual = new Date(y1, m1 - 1, d1);
-    
+
     const [y2, m2, d2] = this.fechaFin.split('-').map(Number);
     const fechaFinVal = new Date(y2, m2 - 1, d2);
 
@@ -81,7 +99,7 @@ export class Horario {
           horaInicio: horaActual,
           horaFin: horaFinCalculada,
         });
-        
+
         horaActual = horaFinCalculada;
       }
       fechaActual.setDate(fechaActual.getDate() + 1);
@@ -99,7 +117,9 @@ export class Horario {
   private sumarMinutos(hora: string, minutos: number): string {
     let totalMinutos = this.horaAMinutos(hora) + minutos;
     if (totalMinutos >= 1440) totalMinutos = 0;
-    const h = Math.floor(totalMinutos / 60).toString().padStart(2, '0');
+    const h = Math.floor(totalMinutos / 60)
+      .toString()
+      .padStart(2, '0');
     const m = (totalMinutos % 60).toString().padStart(2, '0');
     return `${h}:${m}`;
   }

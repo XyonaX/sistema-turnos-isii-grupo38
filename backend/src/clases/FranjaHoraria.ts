@@ -9,7 +9,14 @@ export class FranjaHoraria {
   private estado: string; // 'Libre', 'Bloqueada', 'Ocupada'
   private motivoBloqueo?: string;
 
-  constructor(fecha: string, horaInicio: string, horaFin: string, estado: string, motivoBloqueo?: string, id?: string) {
+  constructor(
+    fecha: string,
+    horaInicio: string,
+    horaFin: string,
+    estado: string,
+    motivoBloqueo?: string,
+    id?: string
+  ) {
     this.id = id;
     this.fecha = fecha;
     this.horaInicio = horaInicio;
@@ -21,12 +28,24 @@ export class FranjaHoraria {
   // =========================================================================
   // GETTERS (Encapsulamiento de datos)
   // =========================================================================
-  public obtenerId(): string | undefined { return this.id; }
-  public obtenerFecha(): string { return this.fecha; }
-  public obtenerHoraInicio(): string { return this.horaInicio; }
-  public obtenerHoraFin(): string { return this.horaFin; }
-  public obtenerEstado(): string { return this.estado; }
-  public obtenerMotivoBloqueo(): string | undefined { return this.motivoBloqueo; }
+  public obtenerId(): string | undefined {
+    return this.id;
+  }
+  public obtenerFecha(): string {
+    return this.fecha;
+  }
+  public obtenerHoraInicio(): string {
+    return this.horaInicio;
+  }
+  public obtenerHoraFin(): string {
+    return this.horaFin;
+  }
+  public obtenerEstado(): string {
+    return this.estado;
+  }
+  public obtenerMotivoBloqueo(): string | undefined {
+    return this.motivoBloqueo;
+  }
 
   // =========================================================================
   // COMPORTAMIENTO / REGLAS DE NEGOCIO
@@ -36,7 +55,9 @@ export class FranjaHoraria {
   public alternarDisponibilidad(): void {
     // REGLA DE ORO: Si ya tiene un turno encima, no se puede tocar desde la agenda general
     if (this.estado.toLowerCase() === 'ocupada') {
-      throw new Error('No se puede modificar la disponibilidad de una franja horaria que ya está ocupada por un turno activo.');
+      throw new Error(
+        'No se puede modificar la disponibilidad de una franja horaria que ya está ocupada por un turno activo.'
+      );
     }
 
     if (this.estado.toLowerCase() === 'libre') {

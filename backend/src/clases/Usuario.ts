@@ -1,6 +1,7 @@
 // src/clases/Usuario.ts
-import { Rol } from './Rol';
 import bcrypt from 'bcryptjs';
+
+import type { Rol } from './Rol';
 
 export class Usuario {
   // Atributos privados encapsulados
@@ -26,10 +27,18 @@ export class Usuario {
   // ==========================================
   // GETTERS (Para exponer los datos de forma segura)
   // ==========================================
-  public obtenerId(): string | undefined { return this.id; }
-  public obtenerNombre(): string { return this.nombre; }
-  public obtenerEmail(): string { return this.email; }
-  public obtenerRol(): Rol { return this.rol; }
+  public obtenerId(): string | undefined {
+    return this.id;
+  }
+  public obtenerNombre(): string {
+    return this.nombre;
+  }
+  public obtenerEmail(): string {
+    return this.email;
+  }
+  public obtenerRol(): Rol {
+    return this.rol;
+  }
 
   // ==========================================
   // COMPORTAMIENTO / LÓGICA DE NEGOCIO

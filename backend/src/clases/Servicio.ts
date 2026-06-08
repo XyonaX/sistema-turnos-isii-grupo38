@@ -1,4 +1,3 @@
-
 import { Usuario } from './Usuario';
 
 export class Servicio {
@@ -8,14 +7,14 @@ export class Servicio {
   private descripcion?: string;
   private duracionMinutos: number;
   private precio: number;
-  private profesional: Usuario; 
+  private profesional: Usuario;
 
   constructor(
-    nombre: string, 
-    profesional: Usuario, 
-    duracionMinutos = 60, 
-    precio = 0, 
-    descripcion?: string, 
+    nombre: string,
+    profesional: Usuario,
+    duracionMinutos = 60,
+    precio = 0,
+    descripcion?: string,
     id?: string
   ) {
     this.id = id;
@@ -30,14 +29,26 @@ export class Servicio {
   }
 
   // =========================================================================
-  // GETTERS 
+  // GETTERS
   // =========================================================================
-  public obtenerId(): string | undefined { return this.id; }
-  public obtenerNombre(): string { return this.nombre; }
-  public obtenerDescripcion(): string | undefined { return this.descripcion; }
-  public obtenerDuracionMinutos(): number { return this.duracionMinutos; }
-  public obtenerPrecio(): number { return this.precio; }
-  public obtenerProfesional(): Usuario { return this.profesional; }
+  public obtenerId(): string | undefined {
+    return this.id;
+  }
+  public obtenerNombre(): string {
+    return this.nombre;
+  }
+  public obtenerDescripcion(): string | undefined {
+    return this.descripcion;
+  }
+  public obtenerDuracionMinutos(): number {
+    return this.duracionMinutos;
+  }
+  public obtenerPrecio(): number {
+    return this.precio;
+  }
+  public obtenerProfesional(): Usuario {
+    return this.profesional;
+  }
 
   // =========================================================================
   // REGLAS DE NEGOCIO EN MEMORIA
@@ -52,8 +63,7 @@ export class Servicio {
     if (this.precio < 0) {
       throw new Error('El precio del servicio no puede ser un valor negativo');
     }
-    
-    
+
     if (!this.profesional.puedeOfrecerServicios()) {
       throw new Error('Solo los profesionales pueden crear o tener servicios asignados');
     }

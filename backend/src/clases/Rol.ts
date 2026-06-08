@@ -1,4 +1,3 @@
-
 export class Rol {
   // Atributos privados encapsulados
   private id?: string;
@@ -11,7 +10,7 @@ export class Rol {
     this.descripcion = descripcion;
   }
 
-  // Métodos de comportamiento 
+  // Métodos de comportamiento
   public obtenerNombre(): string {
     return this.nombre;
   }

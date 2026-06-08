@@ -1,12 +1,12 @@
 // src/clases/Turno.ts
 import { Usuario } from './Usuario';
 
-export class Turno { 
+export class Turno {
   private id?: string;
   private cliente: Usuario;
   private notas?: string;
   private creadoEn: Date;
-  private estado: string; 
+  private estado: string;
 
   constructor(cliente: Usuario, estado: string, notas?: string, creadoEn?: Date, id?: string) {
     this.id = id;
@@ -16,11 +16,21 @@ export class Turno {
     this.estado = estado;
   }
 
-  public obtenerId(): string | undefined { return this.id; }
-  public obtenerCliente(): Usuario { return this.cliente; }
-  public obtenerNotas(): string | undefined { return this.notas; }
-  public obtenerCreadoEn(): Date { return this.creadoEn; }
-  public obtenerNombreEstado(): string { return this.estado; }
+  public obtenerId(): string | undefined {
+    return this.id;
+  }
+  public obtenerCliente(): Usuario {
+    return this.cliente;
+  }
+  public obtenerNotas(): string | undefined {
+    return this.notas;
+  }
+  public obtenerCreadoEn(): Date {
+    return this.creadoEn;
+  }
+  public obtenerNombreEstado(): string {
+    return this.estado;
+  }
 
   public confirmar(): void {
     if (this.estado.toLowerCase() !== 'pendiente') {
@@ -30,9 +40,11 @@ export class Turno {
   }
 
   public cancelar(canceladoPor: 'Cliente' | 'Profesional'): void {
-    if (this.estado.toLowerCase() === 'cancelado' || 
-        this.estado.toLowerCase() === 'completado' || 
-        this.estado.toLowerCase() === 'no asistio') {
+    if (
+      this.estado.toLowerCase() === 'cancelado' ||
+      this.estado.toLowerCase() === 'completado' ||
+      this.estado.toLowerCase() === 'no asistio'
+    ) {
       throw new Error(`No se puede cancelar un turno que ya está finalizado como: ${this.estado}`);
     }
 
