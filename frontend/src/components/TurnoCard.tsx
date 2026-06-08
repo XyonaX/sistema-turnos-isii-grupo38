@@ -44,11 +44,13 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
     }
   };
 
-  const fechaStr = turno.franja?.fecha ?? '';
-  const fecha = fechaStr ? new Date(fechaStr + 'T00:00:00') : new Date();
-  const diaNum = fecha.getDate();
-  const mes = fecha.toLocaleDateString('es-ES', { month: 'short' });
-  const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'short' });
+  const fechaStr = turno.franja?.fecha ?? turno.franjaFecha ?? '';
+  const horaInicio = turno.franja?.horaInicio ?? turno.franjaHoraInicio;
+  const horaFin = turno.franja?.horaFin ?? turno.franjaHoraFin;
+  const fecha = fechaStr ? new Date(fechaStr + 'T00:00:00') : null;
+  const diaNum = fecha ? fecha.getDate() : '—';
+  const mes = fecha ? fecha.toLocaleDateString('es-ES', { month: 'short' }) : '—';
+  const diaSemana = fecha ? fecha.toLocaleDateString('es-ES', { weekday: 'short' }) : '—';
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -115,7 +117,7 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
               />
             </svg>
             <span className="text-lg font-semibold text-[var(--text-primary)]">
-              {turno.franja?.horaInicio ?? '—'} — {turno.franja?.horaFin ?? '—'}
+              {horaInicio ?? '—'} — {horaFin ?? '—'}
             </span>
           </div>
 
@@ -203,7 +205,7 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
               <strong>
                 {fechaStr ? new Date(fechaStr + 'T00:00:00').toLocaleDateString('es-ES') : '—'}
               </strong>{' '}
-              a las <strong>{turno.franja?.horaInicio ?? '—'}</strong>?
+              a las <strong>{horaInicio ?? '—'}</strong>?
             </p>
 
             <p className="text-sm text-[var(--text-muted)] mb-6 bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3">

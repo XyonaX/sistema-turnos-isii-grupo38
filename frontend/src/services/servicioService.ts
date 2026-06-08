@@ -5,7 +5,7 @@ import api from './api';
 interface CrearServicioParams {
   nombre: string;
   descripcion: string;
-  duracion: number;
+  duracionMinutos: number;
   precio: number;
 }
 

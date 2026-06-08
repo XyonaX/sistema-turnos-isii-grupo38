@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 
 import { Navbar } from '../../components/Navbar';
+import { ModalPago } from '../../components/ModalPago';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import type { FranjaHoraria } from '../../types';
@@ -245,6 +246,16 @@ export default function ReservarPage() {
   const [reservando, setReservando] = useState(false);
   const [reservaExitosa, setReservaExitosa] = useState<string | null>(null);
 
+  // Pago
+  const [pagoSesion, setPagoSesion] = useState<{
+    pagoId: string;
+    plazoExpiracion: Date;
+    turnoId: string;
+    monto?: number;
+    servicioNombre?: string;
+  } | null>(null);
+  const [pagoExpirado, setPagoExpirado] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -309,19 +320,47 @@ export default function ReservarPage() {
     if (!franjaModal) return;
     setReservando(true);
     try {
-      await api.post('/turnos', { franjaId: franjaModal.id, notas: notas || undefined });
-      setReservaExitosa(
-        `Turno reservado para el ${formatFechaLarga(franjaModal.fecha ?? '')} a las ${franjaModal.horaInicio}`
-      );
+      const { data } = await api.post('/turnos', {
+        franjaId: franjaModal.id,
+        notas: notas || undefined,
+      });
+      // Cerrar modal de confirmación y abrir modal de pago
       setFranjaModal(null);
-      // Recargar para quitar la franja reservada
-      await cargarFranjas();
+      const servicio = data.turno?.franja?.horario?.servicio;
+      setPagoSesion({
+        pagoId: data.pagoId,
+        plazoExpiracion: new Date(data.plazoExpiracion),
+        turnoId: data.turno.id,
+        monto: servicio?.precio,
+        servicioNombre: servicio?.nombre,
+      });
     } catch (err: any) {
       setError(err.response?.data?.message || 'No se pudo realizar la reserva');
       setFranjaModal(null);
     } finally {
       setReservando(false);
     }
+  };
+
+  const handlePagoExitoso = async (_turno: any) => {
+    setPagoSesion(null);
+    setReservaExitosa('Turno confirmado exitosamente');
+    await cargarFranjas();
+  };
+
+  const handlePagoCancelado = async () => {
+    setPagoSesion(null);
+    setReservaExitosa(null);
+    setPagoExpirado(false);
+    setError('Reserva cancelada. La franja vuelve a estar disponible.');
+    await cargarFranjas();
+  };
+
+  const handlePagoExpirado = async () => {
+    setPagoSesion(null);
+    setReservaExitosa(null);
+    setPagoExpirado(true);
+    await cargarFranjas();
   };
 
   // Guard: no renderizar hasta resolver auth
@@ -344,6 +383,19 @@ export default function ReservarPage() {
           onConfirm={handleReservar}
           onClose={() => setFranjaModal(null)}
           loading={reservando}
+        />
+      )}
+
+      {pagoSesion && (
+        <ModalPago
+          pagoId={pagoSesion.pagoId}
+          plazoExpiracion={pagoSesion.plazoExpiracion}
+          monto={pagoSesion.monto}
+          servicioNombre={pagoSesion.servicioNombre}
+          onPagoExitoso={handlePagoExitoso}
+          onPagoCancelado={handlePagoCancelado}
+          onPagoExpirado={handlePagoExpirado}
+          onClose={() => setPagoSesion(null)}
         />
       )}
 
@@ -378,6 +430,23 @@ export default function ReservarPage() {
             >
               ×
             </button>
+          </div>
+        )}
+
+        {/* Pago expirado */}
+        {pagoExpirado && (
+          <div className="mb-6 flex items-start gap-3 px-4 py-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+            <svg className="shrink-0 mt-0.5 w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Tiempo de pago agotado</p>
+              <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
+                No se completó el pago dentro del plazo. El turno fue cancelado y la franja vuelve a estar disponible.
+              </p>
+            </div>
+            <button onClick={() => setPagoExpirado(false)} className="shrink-0 text-amber-500 hover:text-amber-700 text-lg leading-none cursor-pointer">×</button>
           </div>
         )}
 

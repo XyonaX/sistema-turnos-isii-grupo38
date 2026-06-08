@@ -25,6 +25,12 @@ export default function ProfesionalServiciosPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [loadingForm, setLoadingForm] = useState(false);
 
+  // Edit modal states
+  const [servicioEditando, setServicioEditando] = useState<Servicio | null>(null);
+  const [formEditar, setFormEditar] = useState({ nombre: '', descripcion: '', duracionMinutos: 60, precio: 0 });
+  const [editando, setEditando] = useState(false);
+  const [errorEditar, setErrorEditar] = useState<string | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -108,6 +114,34 @@ export default function ProfesionalServiciosPage() {
       setError(err.response?.data?.message || 'No se pudo crear el servicio');
     } finally {
       setLoadingForm(false);
+    }
+  };
+
+  const handleEditar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!servicioEditando) return;
+    if (!formEditar.nombre.trim()) {
+      setErrorEditar('El nombre es requerido');
+      return;
+    }
+    if (formEditar.duracionMinutos < 15) {
+      setErrorEditar('La duración mínima es 15 minutos');
+      return;
+    }
+    if (formEditar.precio < 0) {
+      setErrorEditar('El precio no puede ser negativo');
+      return;
+    }
+    setEditando(true);
+    setErrorEditar(null);
+    try {
+      await servicioService.actualizarServicio(servicioEditando.id, formEditar);
+      setServicioEditando(null);
+      await cargarServicios();
+    } catch (err: any) {
+      setErrorEditar(err.response?.data?.message || 'Error al actualizar el servicio');
+    } finally {
+      setEditando(false);
     }
   };
 
@@ -279,7 +313,9 @@ export default function ProfesionalServiciosPage() {
                   } text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none`}
                 />
                 {formErrors.descripcion && (
-                  <p className="text-red-500 text-xs mt-1.5 font-medium">{formErrors.descripcion}</p>
+                  <p className="text-red-500 text-xs mt-1.5 font-medium">
+                    {formErrors.descripcion}
+                  </p>
                 )}
               </div>
 
@@ -326,6 +362,111 @@ export default function ProfesionalServiciosPage() {
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
+                  className="px-6 py-3 border border-[var(--border)] text-[var(--text-primary)] font-semibold rounded-lg hover:bg-[var(--bg)] transition-all"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Modal de Edición */}
+        {servicioEditando && (
+          <div className="mb-8 bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 shadow-lg">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-[var(--text-primary)]">✏️ Editar servicio</h2>
+              <button
+                onClick={() => setServicioEditando(null)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleEditar} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Nombre */}
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+                    📝 Nombre del servicio
+                  </label>
+                  <input
+                    type="text"
+                    value={formEditar.nombre}
+                    onChange={(e) => setFormEditar((prev) => ({ ...prev, nombre: e.target.value }))}
+                    placeholder="ej: Consulta General"
+                    className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+                  />
+                </div>
+
+                {/* Duración */}
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+                    ⏱️ Duración (minutos)
+                  </label>
+                  <input
+                    type="number"
+                    value={formEditar.duracionMinutos}
+                    onChange={(e) =>
+                      setFormEditar((prev) => ({ ...prev, duracionMinutos: parseInt(e.target.value) || 0 }))
+                    }
+                    min="15"
+                    step="1"
+                    className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Descripción */}
+              <div>
+                <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+                  📄 Descripción
+                </label>
+                <textarea
+                  value={formEditar.descripcion}
+                  onChange={(e) => setFormEditar((prev) => ({ ...prev, descripcion: e.target.value }))}
+                  placeholder="Describe tu servicio..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none transition-all"
+                />
+              </div>
+
+              {/* Precio */}
+              <div>
+                <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+                  💰 Precio
+                </label>
+                <input
+                  type="number"
+                  value={formEditar.precio}
+                  onChange={(e) =>
+                    setFormEditar((prev) => ({ ...prev, precio: parseFloat(e.target.value) || 0 }))
+                  }
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+                />
+              </div>
+
+              {errorEditar && (
+                <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-sm font-medium">
+                  ⚠️ {errorEditar}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={editando}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold rounded-lg transition-all"
+                >
+                  {editando ? 'Guardando...' : '✓ Guardar cambios'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setServicioEditando(null)}
                   className="px-6 py-3 border border-[var(--border)] text-[var(--text-primary)] font-semibold rounded-lg hover:bg-[var(--bg)] transition-all"
                 >
                   Cancelar
@@ -396,11 +537,9 @@ export default function ProfesionalServiciosPage() {
                     <h3 className="font-bold text-lg text-[var(--text-primary)] mb-1">
                       {servicio.nombre}
                     </h3>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      {servicio.duracionMinutos} minutos
-                    </p>
+                    <p className="text-xs text-[var(--text-muted)]">{servicio.duracionMinutos} minutos</p>
                   </div>
-                  {servicio.precio != null && (
+                  {servicio.precio !== null && (
                     <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                       ${Number(servicio.precio).toFixed(2)}
                     </span>
@@ -413,7 +552,16 @@ export default function ProfesionalServiciosPage() {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => router.push(`/profesional/servicios/${servicio.id}/edit`)}
+                    onClick={() => {
+                      setServicioEditando(servicio);
+                      setFormEditar({
+                        nombre: servicio.nombre,
+                        descripcion: servicio.descripcion || '',
+                        duracionMinutos: servicio.duracionMinutos ?? 60,
+                        precio: servicio.precio || 0,
+                      });
+                      setErrorEditar(null);
+                    }}
                     className="flex-1 px-3 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-semibold transition-all"
                   >
                     ✏️ Editar
