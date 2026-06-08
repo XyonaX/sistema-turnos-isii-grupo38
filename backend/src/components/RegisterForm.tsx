@@ -1,10 +1,11 @@
+/// <reference types="react" />
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { authService } from '../services/authService';
+import { AuthService } from '../services/authService';
 
 interface RegisterFormData {
   nombre: string;
@@ -32,7 +33,7 @@ export function RegisterForm({
     setServerError('');
     setSuccessMessage('');
     try {
-      await authService.register(data.nombre, data.email, data.password, data.rol);
+      await AuthService.register(data.nombre, data.email, data.password, data.rol);
       setSuccessMessage('Registro exitoso. Redirigiendo...');
 
       // Pequeño delay para que se guarden los datos en localStorage
