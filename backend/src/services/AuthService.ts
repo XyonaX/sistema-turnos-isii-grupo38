@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/database';
 import { Rol } from '../entities/Rol';
 import { Usuario } from '../entities/Usuario';
+import { Usuario as UsuarioDominio } from '../clases/Usuario';
+import { Rol as RolDominio } from '../clases/Rol';
 
 export class AuthService {
   private usuarioRepo = AppDataSource.getRepository(Usuario);
@@ -67,7 +69,19 @@ export class AuthService {
       .getOne();
 
     if (!usuario) throw new Error('Credenciales inválidas');
-    const valid = await bcrypt.compare(password, usuario.passwordHash);
+    const rolDominio = new RolDominio(
+      usuario.rol?.nombre || '',
+      usuario.rol?.descripcion || '',
+      usuario.rol?.id
+    );
+    const usuarioDominio = new UsuarioDominio(
+      usuario.nombre,
+      usuario.email,
+      usuario.passwordHash,
+      rolDominio,
+      usuario.id
+    );
+    const valid = await usuarioDominio.verificarContrasenia(password);
     if (!valid) throw new Error('Credenciales inválidas');
 
     const rolNombre = usuario.rol?.nombre;

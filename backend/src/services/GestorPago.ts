@@ -5,11 +5,15 @@ import { Pago } from '../entities/Pago';
 import { Turno } from '../entities/Turno';
 import { getEstadoTurnoId, getEstadoFranjaId } from '../repositories/catalogRepository';
 import type { DatosPago, MetodoPago } from '../types/Pago';
+import { Turno as TurnoDominio } from '../clases/Turno';
+import { Usuario as UsuarioDominio } from '../clases/Usuario';
+import { Rol as RolDominio } from '../clases/Rol';
 
-import { PagoCreditoDebito } from './strategies/PagoCreditoDebito';
-import { PagoEfectivo } from './strategies/PagoEfectivo';
-import { PagoTransferencia } from './strategies/PagoTransferencia';
-import type { PagoStrategy } from './strategies/PagoStrategy';
+import { PagoCreditoDebito } from '../clases/strategies/PagoCreditoDebito';
+import { PagoEfectivo } from '../clases/strategies/PagoEfectivo';
+import { PagoTransferencia } from '../clases/strategies/PagoTransferencia';
+import type { PagoStrategy } from '../clases/strategies/PagoStrategy';
+import { Pago as PagoDominio } from '../clases/Pago';
 
 const PLAZO_PAGO_MS = 30 * 1000; // 30 segundos (TEST — cambiar a 15 * 60 * 1000 en producción)
 
@@ -64,16 +68,28 @@ class GestorPago {
       throw new Error('Pago no encontrado');
     }
 
-    if (pago.estado !== 'ESPERANDO') {
+    const pagoDominio = new PagoDominio(
+      pago.turno.id,
+      pago.expiresAt,
+      pago.estado as any,
+      pago.intentos,
+      pago.metodoPago as any,
+      pago.transactionId,
+      pago.createdAt,
+      pago.id
+    );
+
+    if (!pagoDominio.estaEsperando()) {
       throw new Error(`El pago ya fue procesado (estado: ${pago.estado})`);
     }
 
-    if (new Date() > pago.expiresAt) {
+    if (pagoDominio.estaExpirado()) {
       await this.expirarPago(pago.id);
       throw new Error('El plazo de pago ha expirado');
     }
 
-    pago.intentos += 1;
+    pagoDominio.registrarIntento(metodoPago);
+    pago.intentos = pagoDominio.obtenerIntentos();
     pago.metodoPago = metodoPago;
     await pagoRepo.save(pago);
 
@@ -87,6 +103,17 @@ class GestorPago {
     const resultado = await strategy.procesarPago(datosCliente);
 
     if (resultado.exito) {
+      // Validar con dominio que el turno está en estado Pendiente antes de confirmarlo
+      const rolDominio = new RolDominio(
+        pago.turno.estadoTurno?.nombre || '', ''
+      );
+      const clienteDominio = new UsuarioDominio('', 'placeholder@domain.com', '', rolDominio);
+      const turnoDominio = new TurnoDominio(
+        clienteDominio,
+        pago.turno.estadoTurno?.nombre || '',
+      );
+      turnoDominio.confirmar(); // lanza error si el turno no está en estado Pendiente
+
       // Cancelar el timer de expiración
       const timer = this.timerMap.get(pagoId);
       if (timer) {
@@ -101,8 +128,9 @@ class GestorPago {
       await queryRunner.startTransaction();
 
       try {
-        pago.estado = 'CONFIRMADO';
-        pago.transactionId = resultado.transactionId;
+        pagoDominio.confirmar(resultado.transactionId!);
+        pago.estado = pagoDominio.obtenerEstado();
+        pago.transactionId = pagoDominio.obtenerTransactionId();
         await queryRunner.manager.save(Pago, pago);
 
         const turno = pago.turno;
@@ -167,8 +195,19 @@ class GestorPago {
 
     if (!pago) return;
 
+    const pagoDominio = new PagoDominio(
+      pago.turno.id,
+      pago.expiresAt,
+      pago.estado as any,
+      pago.intentos,
+      pago.metodoPago as any,
+      pago.transactionId,
+      pago.createdAt,
+      pago.id
+    );
+
     // Si ya fue confirmado o cancelado, no hacer nada
-    if (pago.estado !== 'ESPERANDO') return;
+    if (!pagoDominio.estaEsperando()) return;
 
     const estadoCanceladoId = await getEstadoTurnoId(ESTADO_TURNO.CANCELADO);
     const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
@@ -178,7 +217,8 @@ class GestorPago {
     await queryRunner.startTransaction();
 
     try {
-      pago.estado = 'CANCELADO';
+      pagoDominio.cancelar();
+      pago.estado = pagoDominio.obtenerEstado();
       await queryRunner.manager.save(Pago, pago);
 
       const turno = pago.turno;

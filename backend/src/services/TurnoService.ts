@@ -9,6 +9,10 @@ import {
   getTipoNotificacionId,
 } from '../repositories/catalogRepository';
 import { gestorPago } from './GestorPago';
+import { Turno as TurnoDominio } from '../clases/Turno';
+import { FranjaHoraria as FranjaDominio } from '../clases/FranjaHoraria';
+import { Usuario as UsuarioDominio } from '../clases/Usuario';
+import { Rol as RolDominio } from '../clases/Rol';
 
 const TURNO_RELATIONS = {
   relations: {
@@ -23,6 +27,39 @@ export class TurnoService {
   private turnoRepo = AppDataSource.getRepository(Turno);
   private franjaRepo = AppDataSource.getRepository(FranjaHoraria);
   private notificacionRepo = AppDataSource.getRepository(Notificacion);
+
+  private mapearATurno(entity: Turno): TurnoDominio {
+    const rolDominio = new RolDominio(
+      entity.cliente?.rol?.nombre || '',
+      entity.cliente?.rol?.descripcion || '',
+      entity.cliente?.rol?.id
+    );
+    const clienteDominio = new UsuarioDominio(
+      entity.cliente?.nombre || '',
+      entity.cliente?.email || 'placeholder@domain.com',
+      '',
+      rolDominio,
+      entity.cliente?.id
+    );
+    return new TurnoDominio(
+      clienteDominio,
+      entity.estadoTurno?.nombre || '',
+      entity.notas,
+      entity.creadoEn,
+      entity.id
+    );
+  }
+
+  private mapearAFranja(entity: FranjaHoraria): FranjaDominio {
+    return new FranjaDominio(
+      typeof entity.fecha === 'string' ? entity.fecha : (entity.fecha as any).toISOString().substring(0, 10),
+      entity.horaInicio,
+      entity.horaFin,
+      entity.estadoFranja?.nombre || '',
+      entity.motivoBloqueo ?? undefined,
+      entity.id
+    );
+  }
 
   /**
    * Reserva una franja con lock pesimista para evitar doble reserva concurrente.
@@ -52,6 +89,9 @@ export class TurnoService {
       if (!franja) {
         throw new Error('Franja horaria no encontrada');
       }
+
+      const franjaDominio = this.mapearAFranja(franja);
+      franjaDominio.ocupar(); // lanza error si no está Libre
 
       if (franja.estadoFranja.id !== estadoLibreId) {
         throw new Error('Franja horaria no disponible');
@@ -114,10 +154,9 @@ export class TurnoService {
 
     const turnosPendientes = await this.turnoRepo.find({
       where: [
-        { estadoTurno: { nombre: ESTADO_TURNO.PENDIENTE } },
         { estadoTurno: { nombre: ESTADO_TURNO.CONFIRMADO } },
       ],
-      relations: { franja: true, estadoTurno: true },
+      relations: { franja: true, estadoTurno: true, cliente: { rol: true } },
     });
 
     for (const turno of turnosPendientes) {
@@ -131,6 +170,8 @@ export class TurnoService {
       const fechaTurno = new Date(year, month - 1, day, horas, minutos, 0, 0);
 
       if (fechaTurno < ahora) {
+        const turnoDominio = this.mapearATurno(turno);
+        turnoDominio.completar(); // valida que esté Confirmado
         turno.estadoTurno = { id: estadoCompletadoId } as any;
         await this.turnoRepo.save(turno);
       }
@@ -154,6 +195,9 @@ export class TurnoService {
     if (!turno) {
       throw new Error('Turno no encontrado');
     }
+
+    const turnoDominio = this.mapearATurno(turno);
+    turnoDominio.cancelar(clienteId ? 'Cliente' : 'Profesional');
 
     if (turno.estadoTurno.nombre === ESTADO_TURNO.CANCELADO) {
       throw new Error('El turno ya está cancelado');
@@ -232,6 +276,9 @@ export class TurnoService {
     if (turno.estadoTurno.nombre === ESTADO_TURNO.CANCELADO) {
       throw new Error('El turno ya está cancelado');
     }
+
+    const turnoDominioProfesional = this.mapearATurno(turno);
+    turnoDominioProfesional.cancelar('Profesional');
 
     const franjaId = turno.franja!.id;
 
