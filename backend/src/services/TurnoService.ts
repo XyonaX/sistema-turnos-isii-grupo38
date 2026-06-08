@@ -8,6 +8,7 @@ import {
   getEstadoTurnoId,
   getTipoNotificacionId,
 } from '../repositories/catalogRepository';
+import { gestorPago } from './GestorPago';
 
 const TURNO_RELATIONS = {
   relations: {
@@ -23,7 +24,15 @@ export class TurnoService {
   private franjaRepo = AppDataSource.getRepository(FranjaHoraria);
   private notificacionRepo = AppDataSource.getRepository(Notificacion);
 
-  async reservar(clienteId: string, franjaId: string, notas?: string): Promise<Turno> {
+  /**
+   * Reserva una franja con lock pesimista para evitar doble reserva concurrente.
+   * El pago se inicia después del commit para no bloquear la transacción principal.
+   */
+  async reservar(
+    clienteId: string,
+    franjaId: string,
+    notas?: string
+  ): Promise<{ turno: Turno; pagoId: string; plazoExpiracion: Date }> {
     const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
     const estadoOcupadaId = await getEstadoFranjaId(ESTADO_FRANJA.OCUPADA);
     const estadoPendienteId = await getEstadoTurnoId(ESTADO_TURNO.PENDIENTE);
@@ -53,6 +62,7 @@ export class TurnoService {
         franja: { id: franjaId },
         estadoTurno: { id: estadoPendienteId },
         notas,
+        pagoPendiente: true,
       });
 
       const savedTurno = await queryRunner.manager.save(turno);
@@ -70,10 +80,15 @@ export class TurnoService {
 
       await queryRunner.commitTransaction();
 
-      return this.turnoRepo.findOneOrFail({
+      const turnoGuardado = await this.turnoRepo.findOneOrFail({
         where: { id: savedTurno.id },
         ...TURNO_RELATIONS,
       });
+
+      // Iniciar sesión de pago fuera de la transacción principal
+      const { pagoId, plazoExpiracion } = await gestorPago.iniciarPago(savedTurno.id);
+
+      return { turno: turnoGuardado, pagoId, plazoExpiracion };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -92,6 +107,7 @@ export class TurnoService {
     });
   }
 
+  // Se llama antes de devolver los turnos al cliente para que el estado refleje la realidad
   private async actualizarTurnosCompletados(): Promise<void> {
     const ahora = new Date();
     const estadoCompletadoId = await getEstadoTurnoId(ESTADO_TURNO.COMPLETADO);
@@ -121,6 +137,10 @@ export class TurnoService {
     }
   }
 
+  /**
+   * Los clientes solo pueden cancelar con al menos 3 horas de anticipación.
+   * Guardamos fecha/hora de la franja antes de nullificarla para no perder el historial.
+   */
   async cancelar(turnoId: string, clienteId?: string): Promise<Turno> {
     const estadoCanceladoId = await getEstadoTurnoId(ESTADO_TURNO.CANCELADO);
     const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
@@ -160,7 +180,14 @@ export class TurnoService {
     const franjaId = turno.franja?.id;
 
     turno.estadoTurno = { id: estadoCanceladoId } as any;
+    // Snapshot de los datos de la franja antes de romper la relación
+    turno.franjaFecha = turno.franja?.fecha ?? undefined;
+    turno.franjaHoraInicio = turno.franja?.horaInicio ?? undefined;
+    turno.franjaHoraFin = turno.franja?.horaFin ?? undefined;
+    turno.franja = null;
     await this.turnoRepo.save(turno);
+    // TypeORM a veces no persiste el NULL en relaciones @OneToOne; el UPDATE directo lo garantiza
+    await AppDataSource.query('UPDATE turnos SET franjaId = NULL WHERE id = ?', [turno.id]);
 
     if (franjaId) {
       await this.franjaRepo.update(
@@ -183,6 +210,7 @@ export class TurnoService {
     });
   }
 
+  // El profesional puede cancelar en cualquier momento — no aplica la restricción de 3 horas
   async cancelarProfesional(turnoId: string, profesionalId: string): Promise<Turno> {
     const estadoCanceladoId = await getEstadoTurnoId(ESTADO_TURNO.CANCELADO);
     const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
@@ -208,7 +236,13 @@ export class TurnoService {
     const franjaId = turno.franja!.id;
 
     turno.estadoTurno = { id: estadoCanceladoId } as any;
+    turno.franjaFecha = turno.franja?.fecha ?? undefined;
+    turno.franjaHoraInicio = turno.franja?.horaInicio ?? undefined;
+    turno.franjaHoraFin = turno.franja?.horaFin ?? undefined;
+    turno.franja = null;
     await this.turnoRepo.save(turno);
+    // Mismo workaround que en cancelar() — forzar NULL vía SQL directo
+    await AppDataSource.query('UPDATE turnos SET franjaId = NULL WHERE id = ?', [turno.id]);
 
     await this.franjaRepo.update({ id: franjaId }, { estadoFranja: { id: estadoLibreId } as any });
 

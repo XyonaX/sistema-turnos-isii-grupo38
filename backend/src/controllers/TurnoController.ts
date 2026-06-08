@@ -6,11 +6,16 @@ import { TurnoService } from '../services/TurnoService';
 export class TurnoController {
   private turnoService = new TurnoService();
 
+  // Devuelve también pagoId y plazoExpiracion para que el front inicie el flujo de pago
   reservar = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { franjaId, notas } = req.body;
-      const turno = await this.turnoService.reservar(req.user!.id, franjaId, notas);
-      res.status(201).json(turno);
+      const { turno, pagoId, plazoExpiracion } = await this.turnoService.reservar(
+        req.user!.id,
+        franjaId,
+        notas
+      );
+      res.status(201).json({ turno, pagoId, plazoExpiracion });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

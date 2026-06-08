@@ -30,6 +30,18 @@ export class Turno {
   @JoinColumn({ name: 'estadoTurnoId' })
   estadoTurno!: EstadoTurno;
 
+  @Column({ type: 'boolean', default: true })
+  pagoPendiente!: boolean;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  franjaFecha?: string;
+
+  @Column({ type: 'varchar', length: 8, nullable: true })
+  franjaHoraInicio?: string;
+
+  @Column({ type: 'varchar', length: 8, nullable: true })
+  franjaHoraFin?: string;
+
   @Column({ type: 'text', nullable: true })
   notas?: string;
 
