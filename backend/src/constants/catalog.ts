@@ -16,10 +16,3 @@ export const ESTADO_TURNO = {
   COMPLETADO: 'Completado',
   NO_ASISTIO: 'No asistió',
 } as const;
-
-export const TIPO_NOTIFICACION = {
-  RECORDATORIO: 'Recordatorio',
-  CONFIRMACION: 'Confirmación',
-  CANCELACION: 'Cancelación',
-  REPROGRAMACION: 'Reprogramación',
-} as const;

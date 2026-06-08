@@ -93,7 +93,7 @@ export default function ProfesionalServiciosPage() {
       await servicioService.crearServicio({
         nombre,
         descripcion,
-        duracionMinutos: parseInt(duracion),
+        duracion: parseInt(duracion),
         precio: parseFloat(precio),
       });
 

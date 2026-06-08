@@ -6,11 +6,11 @@ import { Navbar } from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { turnoService } from '../../services/turnoService';
-import type { Horario } from '../../types';
+import type { FranjaHoraria } from '../../types';
 
 export default function DisponibilidadPage() {
   const { user } = useAuth();
-  const [horarios, setHorarios] = useState<Horario[]>([]);
+  const [horarios, setHorarios] = useState<FranjaHoraria[]>([]);
   const [loading, setLoading] = useState(true);
   const [reservedHorarios, setReservedHorarios] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +31,11 @@ export default function DisponibilidadPage() {
       setLoading(true);
       setError(null);
       const data = await turnoService.getDisponibles();
-      setHorarios(data as Horario[]);
+      setHorarios(data);
 
       // Seleccionar la primera fecha disponible
       if (data.length > 0 && !selectedDate) {
-        setSelectedDate(data[0].horario?.fecha || null);
+        setSelectedDate(data[0].fecha || null);
       }
     } catch (err) {
       setError('No se pudieron cargar los horarios disponibles');
@@ -168,7 +168,7 @@ export default function DisponibilidadPage() {
       acc[h.fecha].push(h);
       return acc;
     },
-    {} as Record<string, Horario[]>
+    {} as Record<string, FranjaHoraria[]>
   );
 
   const fechasDisponibles = Object.keys(horariosPorFecha).sort();
