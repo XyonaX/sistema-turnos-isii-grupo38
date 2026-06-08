@@ -11,6 +11,7 @@ import {
 import { Usuario } from './Usuario';
 import { FranjaHoraria } from './FranjaHoraria';
 import { EstadoTurno } from './EstadoTurno';
+import { Notificacion } from './Notificacion';
 
 @Entity('turnos')
 export class Turno {
@@ -47,4 +48,6 @@ export class Turno {
   @CreateDateColumn()
   creadoEn!: Date;
 
+  @OneToMany(() => Notificacion, (notificacion) => notificacion.turno)
+  notificaciones!: Notificacion[];
 }
