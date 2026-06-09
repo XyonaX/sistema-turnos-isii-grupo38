@@ -13,6 +13,21 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
   // Determina si se puede cancelar (>= 3 hs de anticipación)
+  const parseFecha = (value?: string | Date | null): Date | null => {
+    if (!value) return null;
+    if (value instanceof Date) {
+      return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value);
+    if (match) {
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    }
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) return parsed;
+    const parsedAlt = new Date(`${value}T00:00:00`);
+    return !isNaN(parsedAlt.getTime()) ? parsedAlt : null;
+  };
+
   const cancelInfo = React.useMemo(() => {
     if (turno.estadoTurno?.nombre === 'Cancelado' || turno.estadoTurno?.nombre === 'Completado') {
       return { canCancel: false, horasRestantes: 0 };
@@ -22,7 +37,8 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
     if (!fecha || !horaInicio) return { canCancel: false, horasRestantes: 0 };
 
     const [h, m] = horaInicio.split(':').map(Number);
-    const turnoDate = new Date(fecha + 'T00:00:00');
+    const turnoDate = parseFecha(fecha);
+    if (!turnoDate) return { canCancel: false, horasRestantes: 0 };
     turnoDate.setHours(h, m, 0, 0);
     const diffMs = turnoDate.getTime() - Date.now();
     const horasRestantes = Math.max(0, diffMs / (1000 * 60 * 60));
@@ -47,7 +63,7 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
   const fechaStr = turno.franja?.fecha ?? turno.franjaFecha ?? '';
   const horaInicio = turno.franja?.horaInicio ?? turno.franjaHoraInicio;
   const horaFin = turno.franja?.horaFin ?? turno.franjaHoraFin;
-  const fecha = fechaStr ? new Date(fechaStr + 'T00:00:00') : null;
+  const fecha = parseFecha(fechaStr);
   const diaNum = fecha ? fecha.getDate() : '—';
   const mes = fecha ? fecha.toLocaleDateString('es-ES', { month: 'short' }) : '—';
   const diaSemana = fecha ? fecha.toLocaleDateString('es-ES', { weekday: 'short' }) : '—';
@@ -203,7 +219,7 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
             <p className="text-[var(--text-secondary)] mb-6">
               ¿Estás seguro de que deseas cancelar este turno del{' '}
               <strong>
-                {fechaStr ? new Date(fechaStr + 'T00:00:00').toLocaleDateString('es-ES') : '—'}
+                {fechaStr ? parseFecha(fechaStr).toLocaleDateString('es-ES') : '—'}
               </strong>{' '}
               a las <strong>{horaInicio ?? '—'}</strong>?
             </p>

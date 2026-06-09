@@ -61,10 +61,6 @@ export class TurnoService {
     );
   }
 
-  /**
-   * Reserva una franja con lock pesimista para evitar doble reserva concurrente.
-   * El pago se inicia después del commit para no bloquear la transacción principal.
-   */
   async reservar(
     clienteId: string,
     franjaId: string,
@@ -86,12 +82,10 @@ export class TurnoService {
         lock: { mode: 'pessimistic_write' },
       });
 
-      if (!franja) {
-        throw new Error('Franja horaria no encontrada');
-      }
+      if (!franja) throw new Error('Franja horaria no encontrada');
 
       const franjaDominio = this.mapearAFranja(franja);
-      franjaDominio.ocupar(); // lanza error si no está Libre
+      franjaDominio.ocupar();
 
       if (franja.estadoFranja.id !== estadoLibreId) {
         throw new Error('Franja horaria no disponible');
@@ -125,7 +119,6 @@ export class TurnoService {
         ...TURNO_RELATIONS,
       });
 
-      // Iniciar sesión de pago fuera de la transacción principal
       const { pagoId, plazoExpiracion } = await gestorPago.iniciarPago(savedTurno.id);
 
       return { turno: turnoGuardado, pagoId, plazoExpiracion };
@@ -139,7 +132,6 @@ export class TurnoService {
 
   async getMisTurnos(clienteId: string): Promise<Turno[]> {
     await this.actualizarTurnosCompletados();
-
     return this.turnoRepo.find({
       where: { cliente: { id: clienteId } },
       order: { creadoEn: 'ASC' },
@@ -147,15 +139,14 @@ export class TurnoService {
     });
   }
 
-  // Se llama antes de devolver los turnos al cliente para que el estado refleje la realidad
+  // ← FIX: reemplazamos save() por createQueryBuilder().update().set() para evitar
+  // el error "update values are not defined"
   private async actualizarTurnosCompletados(): Promise<void> {
     const ahora = new Date();
     const estadoCompletadoId = await getEstadoTurnoId(ESTADO_TURNO.COMPLETADO);
 
     const turnosPendientes = await this.turnoRepo.find({
-      where: [
-        { estadoTurno: { nombre: ESTADO_TURNO.CONFIRMADO } },
-      ],
+      where: [{ estadoTurno: { nombre: ESTADO_TURNO.CONFIRMADO } }],
       relations: { franja: true, estadoTurno: true, cliente: { rol: true } },
     });
 
@@ -171,17 +162,19 @@ export class TurnoService {
 
       if (fechaTurno < ahora) {
         const turnoDominio = this.mapearATurno(turno);
-        turnoDominio.completar(); // valida que esté Confirmado
-        turno.estadoTurno = { id: estadoCompletadoId } as any;
-        await this.turnoRepo.save(turno);
+        turnoDominio.completar();
+
+        // FIX: update directo en lugar de save() con relación parcial
+        await this.turnoRepo
+          .createQueryBuilder()
+          .update(Turno)
+          .set({ estadoTurno: { id: estadoCompletadoId } as any })
+          .where('id = :id', { id: turno.id })
+          .execute();
       }
     }
   }
 
-  /**
-   * Los clientes solo pueden cancelar con al menos 3 horas de anticipación.
-   * Guardamos fecha/hora de la franja antes de nullificarla para no perder el historial.
-   */
   async cancelar(turnoId: string, clienteId?: string): Promise<Turno> {
     const estadoCanceladoId = await getEstadoTurnoId(ESTADO_TURNO.CANCELADO);
     const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
@@ -192,9 +185,7 @@ export class TurnoService {
       ...TURNO_RELATIONS,
     });
 
-    if (!turno) {
-      throw new Error('Turno no encontrado');
-    }
+    if (!turno) throw new Error('Turno no encontrado');
 
     const turnoDominio = this.mapearATurno(turno);
     turnoDominio.cancelar(clienteId ? 'Cliente' : 'Profesional');
@@ -224,13 +215,11 @@ export class TurnoService {
     const franjaId = turno.franja?.id;
 
     turno.estadoTurno = { id: estadoCanceladoId } as any;
-    // Snapshot de los datos de la franja antes de romper la relación
     turno.franjaFecha = turno.franja?.fecha ?? undefined;
     turno.franjaHoraInicio = turno.franja?.horaInicio ?? undefined;
     turno.franjaHoraFin = turno.franja?.horaFin ?? undefined;
     turno.franja = null;
     await this.turnoRepo.save(turno);
-    // TypeORM a veces no persiste el NULL en relaciones @OneToOne; el UPDATE directo lo garantiza
     await AppDataSource.query('UPDATE turnos SET franjaId = NULL WHERE id = ?', [turno.id]);
 
     if (franjaId) {
@@ -254,7 +243,6 @@ export class TurnoService {
     });
   }
 
-  // El profesional puede cancelar en cualquier momento — no aplica la restricción de 3 horas
   async cancelarProfesional(turnoId: string, profesionalId: string): Promise<Turno> {
     const estadoCanceladoId = await getEstadoTurnoId(ESTADO_TURNO.CANCELADO);
     const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
@@ -265,9 +253,7 @@ export class TurnoService {
       ...TURNO_RELATIONS,
     });
 
-    if (!turno) {
-      throw new Error('Turno no encontrado');
-    }
+    if (!turno) throw new Error('Turno no encontrado');
 
     if (turno.franja?.horario?.servicio?.profesional?.id !== profesionalId) {
       throw new Error('No tenés permiso para cancelar este turno');
@@ -288,7 +274,6 @@ export class TurnoService {
     turno.franjaHoraFin = turno.franja?.horaFin ?? undefined;
     turno.franja = null;
     await this.turnoRepo.save(turno);
-    // Mismo workaround que en cancelar() — forzar NULL vía SQL directo
     await AppDataSource.query('UPDATE turnos SET franjaId = NULL WHERE id = ?', [turno.id]);
 
     await this.franjaRepo.update({ id: franjaId }, { estadoFranja: { id: estadoLibreId } as any });

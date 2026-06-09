@@ -25,7 +25,10 @@ export function CalendarioTurnos({ horarios, onSeleccionar }: Props) {
     <div className="space-y-8">
       {fechasOrdenadas.map((fecha) => {
         const slots = agrupados[fecha].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
-        const dateObj = new Date(fecha + 'T00:00:00');
+        const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(fecha);
+        const dateObj = match
+          ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+          : new Date(fecha);
 
         return (
           <div key={fecha} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">

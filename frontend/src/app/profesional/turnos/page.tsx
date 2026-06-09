@@ -83,7 +83,14 @@ function SlotBadge({ franja }: { franja: FranjaHoraria }) {
     </span>
   );
 }
-
+function parseLocalDate(value: string | Date): Date {
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+  const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value);
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return new Date(value);
+}
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProfesionalTurnosPage() {
@@ -295,7 +302,7 @@ export default function ProfesionalTurnosPage() {
               const items = porFecha[fecha];
               const fechaLabel =
                 fecha !== 'sin-fecha'
-                  ? new Date(fecha + 'T00:00:00').toLocaleDateString('es-AR', {
+                  ? parseLocalDate(fecha).toLocaleDateString('es-AR', {
                       weekday: 'long',
                       day: 'numeric',
                       month: 'long',

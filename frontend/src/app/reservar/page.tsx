@@ -104,8 +104,21 @@ function IconCheck() {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function parseLocalDate(fecha: string | Date): Date {
+  if (fecha instanceof Date) {
+    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+  }
+
+  const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(fecha);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+
+  return new Date(fecha);
+}
+
 function formatFechaLarga(fecha: string): string {
-  return new Date(fecha + 'T00:00:00').toLocaleDateString('es-AR', {
+  return parseLocalDate(fecha).toLocaleDateString('es-AR', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -113,7 +126,7 @@ function formatFechaLarga(fecha: string): string {
 }
 
 function formatFechaCorta(fecha: string): string {
-  const d = new Date(fecha + 'T00:00:00');
+  const d = parseLocalDate(fecha);
   return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
 }
 
@@ -544,10 +557,10 @@ export default function ReservarPage() {
                   <div className="flex items-center gap-2 mb-4">
                     <div className="shrink-0 w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex flex-col items-center justify-center">
                       <span className="text-sm font-bold text-[var(--primary)] leading-none">
-                        {new Date(fecha + 'T00:00:00').getDate()}
+                        {parseLocalDate(fecha).getDate()}
                       </span>
                       <span className="text-[10px] text-[var(--text-muted)] uppercase leading-none mt-0.5">
-                        {new Date(fecha + 'T00:00:00').toLocaleDateString('es-AR', {
+                        {parseLocalDate(fecha).toLocaleDateString('es-AR', {
                           month: 'short',
                         })}
                       </span>

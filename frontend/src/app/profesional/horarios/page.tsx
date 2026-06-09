@@ -66,8 +66,17 @@ function calcularPreview(horaInicio: string, horaFin: string, lapso: number, fec
   const slotsPorDia = Math.floor(rangoMin / lapso);
   if (slotsPorDia <= 0) return null;
 
-  const inicio = new Date(fechaInicio + 'T00:00:00');
-  const fin = new Date(fechaFin + 'T00:00:00');
+  const parseLocalDate = (value: string | Date): Date => {
+    if (value instanceof Date) {
+      return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value);
+    if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return new Date(value);
+  };
+
+  const inicio = parseLocalDate(fechaInicio);
+  const fin = parseLocalDate(fechaFin);
   const diffMs = fin.getTime() - inicio.getTime();
   const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 

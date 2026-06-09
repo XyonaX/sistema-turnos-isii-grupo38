@@ -15,7 +15,7 @@ import { PagoTransferencia } from '../clases/strategies/PagoTransferencia';
 import type { PagoStrategy } from '../clases/strategies/PagoStrategy';
 import { Pago as PagoDominio } from '../clases/Pago';
 
-const PLAZO_PAGO_MS = 30 * 1000; // 30 segundos (TEST — cambiar a 15 * 60 * 1000 en producción)
+const PLAZO_PAGO_MS = 5 * 60 * 1000; // 5 minutos // 30 segundos (TEST — cambiar a 15 * 60 * 1000 en producción)
 
 // Singleton que centraliza el ciclo de vida de los pagos en memoria.
 // timerMap mantiene el setTimeout de expiración activo por cada pago pendiente.

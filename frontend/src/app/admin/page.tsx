@@ -69,13 +69,22 @@ export default function DisponibilidadPage() {
     }
   };
 
+  const parseLocalDate = (value: string | Date): Date => {
+    if (value instanceof Date) {
+      return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value);
+    if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return new Date(value);
+  };
+
   const validarFormulario = (): boolean => {
     const errors: Record<string, string> = {};
 
     if (!fecha) {
       errors.fecha = 'La fecha es requerida';
     } else {
-      const fechaSeleccionada = new Date(fecha);
+      const fechaSeleccionada = parseLocalDate(fecha);
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
 
@@ -436,7 +445,7 @@ export default function DisponibilidadPage() {
                 <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">📅 Fechas</h2>
                 <div className="space-y-2 max-h-[500px] overflow-y-auto">
                   {fechasDisponibles.map((fecha) => {
-                    const date = new Date(fecha);
+                    const date = parseLocalDate(fecha);
                     const isSelected = selectedDate === fecha;
                     const numHorarios = horariosPorFecha[fecha]?.length || 0;
 
@@ -477,7 +486,7 @@ export default function DisponibilidadPage() {
                 <>
                   <div className="mb-6">
                     <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-                      {new Date(selectedDate).toLocaleDateString('es-ES', {
+                      {parseLocalDate(selectedDate).toLocaleDateString('es-ES', {
                         weekday: 'long',
                         day: 'numeric',
                         month: 'long',
