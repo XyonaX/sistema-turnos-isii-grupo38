@@ -27,7 +27,12 @@ export default function ProfesionalServiciosPage() {
 
   // Edit modal states
   const [servicioEditando, setServicioEditando] = useState<Servicio | null>(null);
-  const [formEditar, setFormEditar] = useState({ nombre: '', descripcion: '', duracionMinutos: 60, precio: 0 });
+  const [formEditar, setFormEditar] = useState({
+    nombre: '',
+    descripcion: '',
+    duracionMinutos: 60,
+    precio: 0,
+  });
   const [editando, setEditando] = useState(false);
   const [errorEditar, setErrorEditar] = useState<string | null>(null);
 
@@ -409,7 +414,10 @@ export default function ProfesionalServiciosPage() {
                     type="number"
                     value={formEditar.duracionMinutos}
                     onChange={(e) =>
-                      setFormEditar((prev) => ({ ...prev, duracionMinutos: parseInt(e.target.value) || 0 }))
+                      setFormEditar((prev) => ({
+                        ...prev,
+                        duracionMinutos: parseInt(e.target.value) || 0,
+                      }))
                     }
                     min="15"
                     step="1"
@@ -425,7 +433,9 @@ export default function ProfesionalServiciosPage() {
                 </label>
                 <textarea
                   value={formEditar.descripcion}
-                  onChange={(e) => setFormEditar((prev) => ({ ...prev, descripcion: e.target.value }))}
+                  onChange={(e) =>
+                    setFormEditar((prev) => ({ ...prev, descripcion: e.target.value }))
+                  }
                   placeholder="Describe tu servicio..."
                   rows={3}
                   className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none transition-all"
@@ -537,7 +547,9 @@ export default function ProfesionalServiciosPage() {
                     <h3 className="font-bold text-lg text-[var(--text-primary)] mb-1">
                       {servicio.nombre}
                     </h3>
-                    <p className="text-xs text-[var(--text-muted)]">{servicio.duracionMinutos} minutos</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {servicio.duracionMinutos} minutos
+                    </p>
                   </div>
                   {servicio.precio !== null && (
                     <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">

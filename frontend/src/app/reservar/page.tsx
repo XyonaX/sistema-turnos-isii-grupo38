@@ -2,8 +2,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 
-import { Navbar } from '../../components/Navbar';
 import { ModalPago } from '../../components/ModalPago';
+import { Navbar } from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import type { FranjaHoraria } from '../../types';
@@ -449,17 +449,31 @@ export default function ReservarPage() {
         {/* Pago expirado */}
         {pagoExpirado && (
           <div className="mb-6 flex items-start gap-3 px-4 py-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
-            <svg className="shrink-0 mt-0.5 w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg
+              className="shrink-0 mt-0.5 w-5 h-5 text-amber-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Tiempo de pago agotado</p>
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                Tiempo de pago agotado
+              </p>
               <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
-                No se completó el pago dentro del plazo. El turno fue cancelado y la franja vuelve a estar disponible.
+                No se completó el pago dentro del plazo. El turno fue cancelado y la franja vuelve a
+                estar disponible.
               </p>
             </div>
-            <button onClick={() => setPagoExpirado(false)} className="shrink-0 text-amber-500 hover:text-amber-700 text-lg leading-none cursor-pointer">×</button>
+            <button
+              onClick={() => setPagoExpirado(false)}
+              className="shrink-0 text-amber-500 hover:text-amber-700 text-lg leading-none cursor-pointer"
+            >
+              ×
+            </button>
           </div>
         )}
 
@@ -604,9 +618,7 @@ export default function ReservarPage() {
                               )}
                               {servicio && (
                                 <div className="flex flex-wrap gap-1.5">
-                                  <span
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-[11px] font-medium"
-                                  >
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-[11px] font-medium">
                                     {servicio.nombre}
                                     {servicio.precio != null && (
                                       <span className="text-[var(--text-muted)] font-normal">
