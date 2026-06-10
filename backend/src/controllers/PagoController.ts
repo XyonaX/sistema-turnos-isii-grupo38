@@ -1,11 +1,11 @@
 import type { Response } from 'express';
 
 import type { AuthRequest } from '../middlewares/AuthMiddleware';
-import { gestorPago } from '../services/GestorPago';
+import { ReservaFacade } from '../facades/ReservaFacade';
 import { MetodoPago } from '../types/Pago';
 
 export class PagoController {
-  // Toda la lógica de pago vive en GestorPago — acá solo validamos parámetros y delegamos
+  // Toda la lógica de pago vive en la fachada — acá solo validamos parámetros y delegamos
   procesar = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { pagoId, datosCliente, metodoPago } = req.body as {
@@ -21,7 +21,8 @@ export class PagoController {
         return;
       }
 
-      const resultado = await gestorPago.procesarPago(pagoId, datosCliente, metodoPago);
+      const facade = new ReservaFacade();
+      const resultado = await facade.procesarPago(pagoId, datosCliente, metodoPago);
       res.json(resultado);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -38,7 +39,8 @@ export class PagoController {
         return;
       }
 
-      await gestorPago.rechazarPago(pagoId);
+      const facade = new ReservaFacade();
+      await facade.cancelarPago(pagoId);
       res.json({ message: 'Pago cancelado correctamente' });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

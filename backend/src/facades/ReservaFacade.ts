@@ -3,16 +3,19 @@ import { Turno as TurnoDominio } from '../clases/Turno';
 import { Pago as PagoDominio } from '../clases/Pago';
 import { FranjaHoraria as FranjaDominio } from '../clases/FranjaHoraria';
 import { Usuario as UsuarioDominio } from '../clases/Usuario';
-import { MetodoPago } from '../types/Pago';
+import type { DatosPago, MetodoPago } from '../types/Pago';
 
 // Importamos tus servicios e infraestructura
 import { TurnoService } from '../services/TurnoService';
 import { gestorPago } from '../services/GestorPago';
 
 export class ReservaFacade {
+
+
   // =========================================================================
   // ATRIBUTOS PRIVADOS (Según tu diagrama UML)
   // =========================================================================
+  
   private turno?: TurnoDominio;
   private pago?: PagoDominio;
   private franja?: FranjaDominio;
@@ -76,41 +79,39 @@ export class ReservaFacade {
   /**
    * Centraliza el procesamiento del pago con la estrategia elegida.
    */
-  public async procesarPago(turno: TurnoDominio, metodo: MetodoPago): Promise<PagoDominio> {
-    this.turno = turno;
 
-    if (!this.pago) {
-      throw new Error('No hay un proceso de pago activo para esta fachada.');
-    }
+  public async procesarPago(
+    pagoId: string,
+    datosCliente: DatosPago,
+    metodo: MetodoPago
+  ): Promise<{ exito: boolean; turno?: any; error?: string; puedoReintentar?: boolean }> {
+    return gestorPago.procesarPago(pagoId, datosCliente, metodo);
+  }
 
-    const datosClienteMock = {
-      email: this.cliente?.obtenerEmail() || 'cliente@domain.com',
-      numeroTarjeta: '4111111111111111', 
-      vencimiento: '12/30', 
-      cvv: '123' 
-    };
-
-    const resultado = await gestorPago.procesarPago(
-      this.pago.obtenerId()!,
-      datosClienteMock,
-      metodo
-    );
-
-    if (!resultado.exito) {
-      throw new Error(resultado.error || 'El pago no pudo ser procesado.');
-    }
-
-    this.pago.confirmar(resultado.turno.transactionId || 'TX-MOCK');
-    return this.pago;
+  public async cancelarPago(pagoId: string): Promise<void> {
+    await gestorPago.rechazarPago(pagoId);
   }
 
   /**
-   * Encapsula las cancelaciones.
+   * Encapsula la cancelación realizada por un profesional.
    */
-  public async cancelar(turno: TurnoDominio, profesionalId: string): Promise<void> {
+  public async cancelarProfesional(turno: TurnoDominio, profesionalId: string): Promise<void> {
     this.turno = turno;
 
     await this.turnoService.cancelarProfesional(turno.obtenerId()!, profesionalId);
+
+    if (this.pago) {
+      this.pago.cancelar();
+    }
+  }
+
+  /**
+   * Encapsula la cancelación realizada por un cliente.
+   */
+  public async cancelarCliente(turno: TurnoDominio, clienteId: string): Promise<void> {
+    this.turno = turno;
+
+    await this.turnoService.cancelar(turno.obtenerId()!, clienteId);
 
     if (this.pago) {
       this.pago.cancelar();

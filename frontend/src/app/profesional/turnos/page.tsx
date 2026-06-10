@@ -53,8 +53,8 @@ function IconUser() {
 type FiltroVista = 'todos' | 'disponible' | 'reservado' | 'cancelado';
 
 function getEstadoSlot(franja: FranjaHoraria): 'disponible' | 'reservado' | 'cancelado' {
-  if (franja.estadoFranja?.nombre === 'Libre') return 'disponible';
   if (franja.turno?.estadoTurno?.nombre === 'Cancelado') return 'cancelado';
+  if (franja.estadoFranja?.nombre === 'Libre') return 'disponible';
   return 'reservado';
 }
 
@@ -68,8 +68,9 @@ const ESTADO_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 function SlotBadge({ franja }: { franja: FranjaHoraria }) {
-  const key =
-    franja.estadoFranja?.nombre === 'Libre'
+  const key = franja.turno?.estadoTurno?.nombre === 'Cancelado'
+    ? 'cancelado'
+    : franja.estadoFranja?.nombre === 'Libre'
       ? 'disponible'
       : (franja.turno?.estadoTurno?.nombre?.toLowerCase() ?? 'reservado');
   const cfg = ESTADO_BADGE[key] ?? {
