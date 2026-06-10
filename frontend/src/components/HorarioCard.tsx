@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+
 import type { FranjaHoraria } from '../types';
 
 interface HorarioCardProps {

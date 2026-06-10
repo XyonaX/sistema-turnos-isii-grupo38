@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+
 import styles from '../app/page.module.css';
 
 function IconShield({ size = 24 }: { size?: number }) {

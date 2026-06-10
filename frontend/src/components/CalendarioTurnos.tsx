@@ -8,16 +8,13 @@ interface Props {
 
 export function CalendarioTurnos({ horarios, onSeleccionar }: Props) {
   // Agrupar horarios por fecha y ordenarlos
-  const agrupados = (horarios || []).reduce<Record<string, FranjaHoraria[]>>(
-    (acc, h) => {
-      if (!h.fecha) return acc;
-      const fecha = h.fecha.toString().split('T')[0];
-      if (!acc[fecha]) acc[fecha] = [];
-      acc[fecha].push(h);
-      return acc;
-    },
-    {}
-  );
+  const agrupados = (horarios || []).reduce<Record<string, FranjaHoraria[]>>((acc, h) => {
+    if (!h.fecha) return acc;
+    const fecha = h.fecha.toString().split('T')[0];
+    if (!acc[fecha]) acc[fecha] = [];
+    acc[fecha].push(h);
+    return acc;
+  }, {});
 
   const fechasOrdenadas = Object.keys(agrupados).sort();
 
@@ -31,7 +28,10 @@ export function CalendarioTurnos({ horarios, onSeleccionar }: Props) {
           : new Date(fecha);
 
         return (
-          <div key={fecha} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
+          <div
+            key={fecha}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6"
+          >
             <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4 capitalize">
               {dateObj.toLocaleDateString('es-ES', {
                 weekday: 'long',

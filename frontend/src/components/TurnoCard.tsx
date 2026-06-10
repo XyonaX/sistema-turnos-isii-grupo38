@@ -154,32 +154,34 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
         </div>
 
         {/* Botón cancelar */}
-        {turno.estadoTurno?.nombre !== 'Cancelado' && turno.estadoTurno?.nombre !== 'Completado' && onCancelar && (
-          <div className="flex-shrink-0 flex flex-col items-end gap-1">
-            <button
-              onClick={cancelInfo.canCancel ? handleCancelarClick : undefined}
-              disabled={isCanceling || !cancelInfo.canCancel}
-              title={
-                !cancelInfo.canCancel
-                  ? `Solo se puede cancelar con al menos 3 horas de anticipación. Quedan ${cancelInfo.horasRestantes.toFixed(1)}hs.`
-                  : 'Cancelar turno'
-              }
-              className={`px-4 py-2 border font-semibold rounded-lg transition-all
+        {turno.estadoTurno?.nombre !== 'Cancelado' &&
+          turno.estadoTurno?.nombre !== 'Completado' &&
+          onCancelar && (
+            <div className="flex-shrink-0 flex flex-col items-end gap-1">
+              <button
+                onClick={cancelInfo.canCancel ? handleCancelarClick : undefined}
+                disabled={isCanceling || !cancelInfo.canCancel}
+                title={
+                  !cancelInfo.canCancel
+                    ? `Solo se puede cancelar con al menos 3 horas de anticipación. Quedan ${cancelInfo.horasRestantes.toFixed(1)}hs.`
+                    : 'Cancelar turno'
+                }
+                className={`px-4 py-2 border font-semibold rounded-lg transition-all
                 ${
                   cancelInfo.canCancel
                     ? 'bg-red-500/10 hover:bg-red-500/20 border-red-500/30 text-red-600 dark:text-red-400 cursor-pointer'
                     : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400 cursor-not-allowed opacity-60'
                 } disabled:opacity-50`}
-            >
-              {isCanceling ? 'Cancelando...' : 'Cancelar'}
-            </button>
-            {!cancelInfo.canCancel && (
-              <span className="text-[10px] text-[var(--text-muted)] text-right leading-tight max-w-[110px]">
-                Mín. 3hs de anticipación
-              </span>
-            )}
-          </div>
-        )}
+              >
+                {isCanceling ? 'Cancelando...' : 'Cancelar'}
+              </button>
+              {!cancelInfo.canCancel && (
+                <span className="text-[10px] text-[var(--text-muted)] text-right leading-tight max-w-[110px]">
+                  Mín. 3hs de anticipación
+                </span>
+              )}
+            </div>
+          )}
       </div>
 
       {/* Detalles adicionales */}
@@ -218,10 +220,8 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
 
             <p className="text-[var(--text-secondary)] mb-6">
               ¿Estás seguro de que deseas cancelar este turno del{' '}
-              <strong>
-                {fechaStr ? parseFecha(fechaStr).toLocaleDateString('es-ES') : '—'}
-              </strong>{' '}
-              a las <strong>{horaInicio ?? '—'}</strong>?
+              <strong>{fechaStr ? parseFecha(fechaStr).toLocaleDateString('es-ES') : '—'}</strong> a
+              las <strong>{horaInicio ?? '—'}</strong>?
             </p>
 
             <p className="text-sm text-[var(--text-muted)] mb-6 bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3">

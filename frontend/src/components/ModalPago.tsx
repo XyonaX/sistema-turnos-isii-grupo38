@@ -101,16 +101,15 @@ export function ModalPago({
     const soloDigitos = valor.replace(/\D/g, '').slice(0, 16);
     const formateado = soloDigitos.replace(/(.{4})/g, '$1 ').trim();
     setNumeroTarjeta(formateado);
-    setErroresCampo(prev => ({ ...prev, numeroTarjeta: undefined }));
+    setErroresCampo((prev) => ({ ...prev, numeroTarjeta: undefined }));
   }
 
   function handleVencimientoChange(valor: string) {
     const soloDigitos = valor.replace(/\D/g, '').slice(0, 4);
-    const formateado = soloDigitos.length > 2
-      ? `${soloDigitos.slice(0, 2)}/${soloDigitos.slice(2)}`
-      : soloDigitos;
+    const formateado =
+      soloDigitos.length > 2 ? `${soloDigitos.slice(0, 2)}/${soloDigitos.slice(2)}` : soloDigitos;
     setVencimiento(formateado);
-    setErroresCampo(prev => ({ ...prev, vencimiento: undefined }));
+    setErroresCampo((prev) => ({ ...prev, vencimiento: undefined }));
   }
 
   function validarCampos(): boolean {
@@ -233,21 +232,33 @@ export function ModalPago({
         <div className="flex gap-2 mb-5">
           <button
             type="button"
-            onClick={() => { setMetodoPago('credito_debito'); setError(null); setErroresCampo({}); }}
+            onClick={() => {
+              setMetodoPago('credito_debito');
+              setError(null);
+              setErroresCampo({});
+            }}
             className={tabClass('credito_debito')}
           >
             Crédito/Débito
           </button>
           <button
             type="button"
-            onClick={() => { setMetodoPago('transferencia'); setError(null); setErroresCampo({}); }}
+            onClick={() => {
+              setMetodoPago('transferencia');
+              setError(null);
+              setErroresCampo({});
+            }}
             className={tabClass('transferencia')}
           >
             Transferencia
           </button>
           <button
             type="button"
-            onClick={() => { setMetodoPago('efectivo'); setError(null); setErroresCampo({}); }}
+            onClick={() => {
+              setMetodoPago('efectivo');
+              setError(null);
+              setErroresCampo({});
+            }}
             className={tabClass('efectivo')}
           >
             Efectivo
@@ -302,7 +313,7 @@ export function ModalPago({
                     value={cvv}
                     onChange={(e) => {
                       setCvv(e.target.value.replace(/\D/g, ''));
-                      setErroresCampo(prev => ({ ...prev, cvv: undefined }));
+                      setErroresCampo((prev) => ({ ...prev, cvv: undefined }));
                     }}
                     placeholder="###"
                     maxLength={3}
@@ -327,22 +338,21 @@ export function ModalPago({
                 value={cbu}
                 onChange={(e) => {
                   setCbu(e.target.value.replace(/\D/g, ''));
-                  setErroresCampo(prev => ({ ...prev, cbu: undefined }));
+                  setErroresCampo((prev) => ({ ...prev, cbu: undefined }));
                 }}
                 placeholder="CBU (22 dígitos)"
                 maxLength={22}
                 disabled={loading || expirado}
                 className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 disabled:opacity-50"
               />
-              {erroresCampo.cbu && (
-                <p className="text-red-500 text-xs mt-1">{erroresCampo.cbu}</p>
-              )}
+              {erroresCampo.cbu && <p className="text-red-500 text-xs mt-1">{erroresCampo.cbu}</p>}
             </div>
           )}
 
           {metodoPago === 'efectivo' && (
             <div className="px-4 py-4 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text-secondary)] text-sm leading-relaxed">
-              Abonás al momento de tu turno en el local. Tu turno quedará confirmado automáticamente.
+              Abonás al momento de tu turno en el local. Tu turno quedará confirmado
+              automáticamente.
             </div>
           )}
         </div>
