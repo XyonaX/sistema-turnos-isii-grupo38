@@ -180,117 +180,167 @@ export class TurnoService {
     const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
     const tipoCancelacionId = await getTipoNotificacionId(TIPO_NOTIFICACION.CANCELACION);
 
-    const turno = await this.turnoRepo.findOne({
-      where: clienteId ? { id: turnoId, cliente: { id: clienteId } } : { id: turnoId },
-      ...TURNO_RELATIONS,
-    });
+    return AppDataSource.transaction(async (manager) => {
+      const turno = await manager.findOne(Turno, {
+        where: clienteId ? { id: turnoId, cliente: { id: clienteId } } : { id: turnoId },
+        relations: {
+          cliente: { rol: true },
+          franja: { horario: { servicio: { profesional: true } }, estadoFranja: true },
+          estadoTurno: true,
+          notificaciones: { tipoNotificacion: true },
+        },
+      });
 
-    if (!turno) throw new Error('Turno no encontrado');
+      if (!turno) throw new Error('Turno no encontrado');
+      if (turno.estadoTurno.nombre === ESTADO_TURNO.CANCELADO) {
+        throw new Error('El turno ya está cancelado');
+      }
 
-    const turnoDominio = this.mapearATurno(turno);
-    turnoDominio.cancelar(clienteId ? 'Cliente' : 'Profesional');
+      const turnoDominio = this.mapearATurno(turno);
+      turnoDominio.cancelar(clienteId ? 'Cliente' : 'Profesional');
 
-    if (turno.estadoTurno.nombre === ESTADO_TURNO.CANCELADO) {
-      throw new Error('El turno ya está cancelado');
-    }
-
-    if (clienteId) {
-      const fechaRaw = turno.franja?.fecha;
-      const horaInicio = turno.franja?.horaInicio;
-      if (fechaRaw && horaInicio) {
-        const [h, m] = horaInicio.split(':').map(Number);
-        const fechaStr: string =
-          typeof fechaRaw === 'string'
-            ? fechaRaw
-            : (fechaRaw as unknown as Date).toISOString().substring(0, 10);
-        const [year, month, day] = fechaStr.substring(0, 10).split('-').map(Number);
-        const turnoDate = new Date(year, month - 1, day, h, m, 0, 0);
-        const diffMs = turnoDate.getTime() - Date.now();
-        if (diffMs < 3 * 60 * 60 * 1000) {
-          throw new Error('No se puede cancelar el turno con menos de 3 horas de anticipación');
+      if (clienteId) {
+        const fechaRaw = turno.franja?.fecha;
+        const horaInicio = turno.franja?.horaInicio;
+        if (fechaRaw && horaInicio) {
+          const [h, m] = horaInicio.split(':').map(Number);
+          const fechaStr: string =
+            typeof fechaRaw === 'string'
+              ? fechaRaw
+              : (fechaRaw as unknown as Date).toISOString().substring(0, 10);
+          const [year, month, day] = fechaStr.substring(0, 10).split('-').map(Number);
+          const turnoDate = new Date(year, month - 1, day, h, m, 0, 0);
+          const diffMs = turnoDate.getTime() - Date.now();
+          if (diffMs < 3 * 60 * 60 * 1000) {
+            throw new Error('No se puede cancelar el turno con menos de 3 horas de anticipación');
+          }
         }
       }
-    }
 
-    const franjaId = turno.franja?.id;
+      const franjaId = turno.franja?.id;
+      const horarioId = turno.franja?.horario?.id;
+      const fecha = turno.franja?.fecha;
+      const horaInicio = turno.franja?.horaInicio;
+      const horaFin = turno.franja?.horaFin;
 
-    turno.estadoTurno = { id: estadoCanceladoId } as any;
-    turno.franjaFecha = turno.franja?.fecha ?? undefined;
-    turno.franjaHoraInicio = turno.franja?.horaInicio ?? undefined;
-    turno.franjaHoraFin = turno.franja?.horaFin ?? undefined;
-    turno.franja = null;
-    await this.turnoRepo.save(turno);
-    await AppDataSource.query('UPDATE turnos SET franjaId = NULL WHERE id = ?', [turno.id]);
+      turno.estadoTurno = { id: estadoCanceladoId } as any;
+      turno.franjaFecha = fecha ?? undefined;
+      turno.franjaHoraInicio = horaInicio ?? undefined;
+      turno.franjaHoraFin = horaFin ?? undefined;
+      await manager.save(turno);
 
-    if (franjaId) {
-      await this.franjaRepo.update(
-        { id: franjaId },
-        { estadoFranja: { id: estadoLibreId } as any }
-      );
-    }
+      if (horarioId && fecha && horaInicio && horaFin) {
+        const franjaLibre = manager.create(FranjaHoraria, {
+          fecha,
+          horaInicio,
+          horaFin,
+          horario: { id: horarioId },
+          estadoFranja: { id: estadoLibreId },
+        });
+        await manager.save(franjaLibre);
+      }
 
-    const notificacion = this.notificacionRepo.create({
-      turno: { id: turnoId },
-      tipoNotificacion: { id: tipoCancelacionId },
-      mensaje: 'Turno cancelado',
-      leida: false,
-    });
-    await this.notificacionRepo.save(notificacion);
+      const notificacion = manager.create(Notificacion, {
+        turno: { id: turnoId },
+        tipoNotificacion: { id: tipoCancelacionId },
+        mensaje: 'Turno cancelado',
+        leida: false,
+      });
+      await manager.save(notificacion);
 
-    return this.turnoRepo.findOneOrFail({
-      where: { id: turno.id },
-      ...TURNO_RELATIONS,
+      return manager.findOneOrFail(Turno, {
+        where: { id: turno.id },
+        relations: {
+          cliente: true,
+          franja: { horario: { servicio: { profesional: true } }, estadoFranja: true },
+          estadoTurno: true,
+          notificaciones: { tipoNotificacion: true },
+        },
+      });
     });
   }
 
   async cancelarProfesional(turnoId: string, profesionalId: string): Promise<Turno> {
-    const estadoCanceladoId = await getEstadoTurnoId(ESTADO_TURNO.CANCELADO);
-    const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
-    const tipoCancelacionId = await getTipoNotificacionId(TIPO_NOTIFICACION.CANCELACION);
+  const estadoCanceladoId = await getEstadoTurnoId(ESTADO_TURNO.CANCELADO);
+  const estadoLibreId = await getEstadoFranjaId(ESTADO_FRANJA.LIBRE);
+  const tipoCancelacionId = await getTipoNotificacionId(TIPO_NOTIFICACION.CANCELACION);
 
-    const turno = await this.turnoRepo.findOne({
-      where: { id: turnoId },
-      ...TURNO_RELATIONS,
-    });
+  const turno = await this.turnoRepo.findOne({
+    where: { id: turnoId },
+    ...TURNO_RELATIONS,
+  });
 
-    if (!turno) throw new Error('Turno no encontrado');
+  if (!turno) throw new Error('Turno no encontrado');
+  if (!turno.franja) throw new Error('El turno no posee una franja horaria asociada');
 
-    if (turno.franja?.horario?.servicio?.profesional?.id !== profesionalId) {
-      throw new Error('No tenés permiso para cancelar este turno');
-    }
-
-    if (turno.estadoTurno.nombre === ESTADO_TURNO.CANCELADO) {
-      throw new Error('El turno ya está cancelado');
-    }
-
-    const turnoDominioProfesional = this.mapearATurno(turno);
-    turnoDominioProfesional.cancelar('Profesional');
-
-    const franjaId = turno.franja!.id;
-
-    turno.estadoTurno = { id: estadoCanceladoId } as any;
-    turno.franjaFecha = turno.franja?.fecha ?? undefined;
-    turno.franjaHoraInicio = turno.franja?.horaInicio ?? undefined;
-    turno.franjaHoraFin = turno.franja?.horaFin ?? undefined;
-    turno.franja = null;
-    await this.turnoRepo.save(turno);
-    await AppDataSource.query('UPDATE turnos SET franjaId = NULL WHERE id = ?', [turno.id]);
-
-    await this.franjaRepo.update({ id: franjaId }, { estadoFranja: { id: estadoLibreId } as any });
-
-    const notificacion = this.notificacionRepo.create({
-      turno: { id: turnoId },
-      tipoNotificacion: { id: tipoCancelacionId },
-      mensaje: 'Turno cancelado por el profesional',
-      leida: false,
-    });
-    await this.notificacionRepo.save(notificacion);
-
-    return this.turnoRepo.findOneOrFail({
-      where: { id: turno.id },
-      ...TURNO_RELATIONS,
-    });
+  // Validación de seguridad y pertenencia
+  if (turno.franja?.horario?.servicio?.profesional?.id !== profesionalId) {
+    throw new Error('No tenés permiso para cancelar este turno');
   }
+
+  if (turno.estadoTurno.nombre === ESTADO_TURNO.CANCELADO) {
+    throw new Error('El turno ya está cancelado');
+  }
+
+  // 1. Lógica de Dominio para el Turno
+  const turnoDominioProfesional = this.mapearATurno(turno);
+  turnoDominioProfesional.cancelar('Profesional');
+
+  // =========================================================================
+  // 🔥 REFACTORIZACIÓN CON DOMINIO: FranjaHoraria
+  // =========================================================================
+  const franjaId = turno.franja.id;
+
+  // 2. Instanciamos e hidratamos el modelo de dominio con los datos actuales de la DB
+  const franjaDominio = new FranjaDominio(
+    turno.franja.fecha,
+    turno.franja.horaInicio,
+    turno.franja.horaFin,
+    turno.franja.estadoFranja?.nombre || 'Ocupada',
+    turno.franja.motivoBloqueo,
+    franjaId
+  );
+
+  // 3. Ejecutamos el comportamiento puro de tu negocio (muta el estado en memoria RAM)
+  franjaDominio.liberar();
+  // =========================================================================
+
+  // 4. Preparación y persistencia de la cancelación del turno en MySQL
+  turno.estadoTurno = { id: estadoCanceladoId } as any;
+  turno.franjaFecha = turno.franja.fecha ?? undefined;
+  turno.franjaHoraInicio = turno.franja.horaInicio ?? undefined;
+  turno.franjaHoraFin = turno.franja.horaFin ?? undefined;
+  turno.franja = null;
+  
+  await this.turnoRepo.save(turno);
+  await AppDataSource.query('UPDATE turnos SET franjaId = NULL WHERE id = ?', [turno.id]);
+
+  // =========================================================================
+  // 5. Persistimos los cambios de la franja usando las propiedades del dominio
+  // =========================================================================
+  await this.franjaRepo.update(
+    { id: franjaId }, 
+    { 
+      estadoFranja: { id: estadoLibreId } as any, // Mapeamos 'Libre' al ID de tu tabla relacional
+      motivoBloqueo: franjaDominio.obtenerMotivoBloqueo() // Pasará undefined de forma limpia como pide tu método
+    }
+  );
+  // =========================================================================
+
+  // 6. Generación de auditoría/notificación
+  const notificacion = this.notificacionRepo.create({
+    turno: { id: turnoId },
+    tipoNotificacion: { id: tipoCancelacionId },
+    mensaje: 'Turno cancelado por el profesional',
+    leida: false,
+  });
+  await this.notificacionRepo.save(notificacion);
+
+  return this.turnoRepo.findOneOrFail({
+    where: { id: turno.id },
+    ...TURNO_RELATIONS,
+  });
+}
 
   async getTodos(): Promise<Turno[]> {
     return this.turnoRepo.find({
