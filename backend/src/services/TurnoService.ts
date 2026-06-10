@@ -192,9 +192,6 @@ export class TurnoService {
       });
 
       if (!turno) throw new Error('Turno no encontrado');
-      if (turno.estadoTurno.nombre === ESTADO_TURNO.CANCELADO) {
-        throw new Error('El turno ya está cancelado');
-      }
 
       const turnoDominio = this.mapearATurno(turno);
       turnoDominio.cancelar(clienteId ? 'Cliente' : 'Profesional');
@@ -218,7 +215,6 @@ export class TurnoService {
       }
 
       const franjaId = turno.franja?.id;
-      const horarioId = turno.franja?.horario?.id;
       const fecha = turno.franja?.fecha;
       const horaInicio = turno.franja?.horaInicio;
       const horaFin = turno.franja?.horaFin;
@@ -227,17 +223,19 @@ export class TurnoService {
       turno.franjaFecha = fecha ?? undefined;
       turno.franjaHoraInicio = horaInicio ?? undefined;
       turno.franjaHoraFin = horaFin ?? undefined;
+      turno.franja = null;
       await manager.save(turno);
 
-      if (horarioId && fecha && horaInicio && horaFin) {
-        const franjaLibre = manager.create(FranjaHoraria, {
-          fecha,
-          horaInicio,
-          horaFin,
-          horario: { id: horarioId },
-          estadoFranja: { id: estadoLibreId },
-        });
-        await manager.save(franjaLibre);
+      // TypeORM 0.3.x bug: setting franja=null does not always persist franjaId=NULL.
+      // Raw SQL guarantees the FK is cleared so the franja's unique constraint is released.
+      await manager.query('UPDATE turnos SET franjaId = NULL WHERE id = ?', [turno.id]);
+
+      // Free the existing franja instead of creating a duplicate one.
+      if (franjaId) {
+        await manager.query(
+          'UPDATE franjas_horarias SET estadoFranjaId = ? WHERE id = ?',
+          [estadoLibreId, franjaId]
+        );
       }
 
       const notificacion = manager.create(Notificacion, {

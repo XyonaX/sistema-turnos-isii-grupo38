@@ -7,6 +7,7 @@ jest.mock('../../config/database', () => ({
     getRepository: jest.fn(),
     createQueryRunner: jest.fn(),
     query: jest.fn(),
+    transaction: jest.fn(),
   },
 }));
 
@@ -72,6 +73,21 @@ describe('TurnoService', () => {
 
     (AppDataSource.createQueryRunner as jest.Mock).mockReturnValue(mockQueryRunner);
     (AppDataSource.query as jest.Mock).mockResolvedValue(undefined);
+
+    // Provide a transaction implementation that executes the callback with a
+    // manager delegating to the repository mocks already set up per-test.
+    (AppDataSource.transaction as jest.Mock).mockImplementation(
+      async (cb: (manager: any) => Promise<any>) => {
+        const transactionManager = {
+          findOne: mockTurnoRepo.findOne,
+          findOneOrFail: mockTurnoRepo.findOneOrFail,
+          save: mockTurnoRepo.save,
+          create: jest.fn().mockReturnValue({}),
+          query: jest.fn().mockResolvedValue(undefined),
+        };
+        return cb(transactionManager);
+      }
+    );
 
     service = new TurnoService();
   });
@@ -197,7 +213,9 @@ describe('TurnoService', () => {
       const result = await service.cancelar('turno-1', 'cliente-1');
 
       expect(result).toBeDefined();
-      expect(mockTurnoRepo.save).toHaveBeenCalledTimes(1);
+      // manager.save is called twice inside the transaction: once for the turno
+      // and once for the cancellation notification.
+      expect(mockTurnoRepo.save).toHaveBeenCalledTimes(2);
     });
 
     it('turno no encontrado: lanza error "Turno no encontrado"', async () => {
