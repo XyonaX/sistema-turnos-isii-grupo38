@@ -77,6 +77,41 @@ describe('AuthService', () => {
       ).rejects.toThrow('El correo ya está registrado');
     });
 
+    it('email duplicado en mayúsculas: detecta duplicado de forma case-insensitive', async () => {
+      mockUsuarioRepo.findOneBy.mockResolvedValue({ id: 'existing', email: 'juan@test.com' });
+
+      await expect(
+        service.register('Juan', 'JUAN@TEST.COM', 'password123', 'cliente')
+      ).rejects.toThrow('El correo ya está registrado');
+
+      // Verifica que la búsqueda se hizo con el email en minúsculas
+      expect(mockUsuarioRepo.findOneBy).toHaveBeenCalledWith({ email: 'juan@test.com' });
+    });
+
+    it('email guardado en minúsculas aunque se reciba en mayúsculas', async () => {
+      const savedUser = {
+        id: 'user-1',
+        nombre: 'Juan',
+        email: 'juan@test.com',
+        passwordHash: 'hash',
+        rol: { id: 'rol-1', nombre: 'cliente' },
+      };
+
+      mockUsuarioRepo.findOneBy.mockResolvedValue(null);
+      mockRolRepo.findOneBy.mockResolvedValue({ id: 'rol-1', nombre: 'cliente' });
+      mockUsuarioRepo.create.mockReturnValue(savedUser);
+      mockUsuarioRepo.save.mockResolvedValue(savedUser);
+      mockUsuarioRepo.findOne.mockResolvedValue(savedUser);
+
+      const result = await service.register('Juan', 'JUAN@TEST.COM', 'password123', 'cliente');
+
+      // El email recibido debe haber sido normalizado antes de crear el usuario
+      expect(mockUsuarioRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'juan@test.com' })
+      );
+      expect(result.user.email).toBe('juan@test.com');
+    });
+
     it('rol no encontrado: lanza error con mensaje correcto', async () => {
       mockUsuarioRepo.findOneBy.mockResolvedValue(null);
       mockRolRepo.findOneBy.mockResolvedValue(null);
@@ -116,6 +151,32 @@ describe('AuthService', () => {
         email: 'maria@test.com',
         rol: 'profesional',
       });
+    });
+
+    it('email en mayúsculas: hace la búsqueda con email en minúsculas', async () => {
+      const passwordHash = bcrypt.hashSync('password123', 10);
+
+      const mockQB = {
+        addSelect: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue({
+          id: 'user-1',
+          nombre: 'Maria',
+          email: 'maria@test.com',
+          passwordHash,
+          rol: { id: 'rol-1', nombre: 'profesional', descripcion: 'Profesional' },
+        }),
+      };
+      mockUsuarioRepo.createQueryBuilder.mockReturnValue(mockQB);
+
+      const result = await service.login('MARIA@TEST.COM', 'password123');
+
+      // Verifica que la cláusula WHERE recibió el email en minúsculas
+      expect(mockQB.where).toHaveBeenCalledWith('usuario.email = :email', {
+        email: 'maria@test.com',
+      });
+      expect(result.user).toMatchObject({ email: 'maria@test.com' });
     });
 
     it('email no existe: lanza error "Credenciales inválidas"', async () => {

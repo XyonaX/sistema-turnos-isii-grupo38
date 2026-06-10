@@ -17,14 +17,15 @@ export class AuthService {
     password: string,
     rolNombre: string
   ): Promise<{ token: string; user: { id: string; nombre: string; email: string; rol?: string } }> {
-    const existing = await this.usuarioRepo.findOneBy({ email });
+    const normalizedEmail = email.toLowerCase();
+    const existing = await this.usuarioRepo.findOneBy({ email: normalizedEmail });
     if (existing) throw new Error('El correo ya está registrado');
 
     const rol = await this.rolRepo.findOneBy({ nombre: rolNombre });
     if (!rol) throw new Error(`Rol "${rolNombre}" no encontrado`);
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const usuario = this.usuarioRepo.create({ nombre, email, passwordHash, rol });
+    const usuario = this.usuarioRepo.create({ nombre, email: normalizedEmail, passwordHash, rol });
     const savedUsuario = await this.usuarioRepo.save(usuario);
 
     const usuarioConRol = await this.usuarioRepo.findOne({
@@ -61,11 +62,12 @@ export class AuthService {
   ): Promise<{ token: string; user: { id: string; nombre: string; email: string; rol?: string } }> {
     // addSelect needed because passwordHash has select: false
     //Validar que el usuario existe y comparar contraseña
+    const normalizedEmail = email.toLowerCase();
     const usuario = await this.usuarioRepo
       .createQueryBuilder('usuario')
       .addSelect('usuario.passwordHash')
       .leftJoinAndSelect('usuario.rol', 'rol')
-      .where('usuario.email = :email', { email })
+      .where('usuario.email = :email', { email: normalizedEmail })
       .getOne();
 
     if (!usuario) throw new Error('Credenciales inválidas');
