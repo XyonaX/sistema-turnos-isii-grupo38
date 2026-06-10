@@ -8,10 +8,10 @@ api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
-      
+
       // DIAGNÓSTICO FRONTEND: Ver si el token realmente existe en este navegador
       console.log('[Axios Interceptor] ¿Se encontró token en LocalStorage?:', !!token);
-      
+
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
