@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+
 import type { FranjaHoraria } from '../types';
 
 interface HorarioCardProps {
@@ -46,8 +47,19 @@ export function HorarioCard({
     }
   };
 
-  const fechaStr = horario.horario?.fecha ?? '';
-  const fecha = fechaStr ? new Date(fechaStr + 'T00:00:00') : new Date();
+  const parseLocalDate = (value: string | Date): Date => {
+    if (value instanceof Date) {
+      return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value);
+    if (match) {
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    }
+    return new Date(value);
+  };
+
+  const fechaStr = horario.fecha ?? '';
+  const fecha = fechaStr ? parseLocalDate(fechaStr) : new Date();
   const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'long' });
   const diaNum = fecha.getDate();
   const mes = fecha.toLocaleDateString('es-ES', { month: 'short' });

@@ -3,15 +3,25 @@ import { useEffect, useState } from 'react';
 
 import { Navbar } from '../../../components/Navbar';
 import { useAuth } from '../../../context/AuthContext';
-import { servicioService } from '../../../services/servicioService';
 import { horarioService } from '../../../services/horarioService';
+import { servicioService } from '../../../services/servicioService';
 import type { Servicio } from '../../../types';
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 
 function IconCalendar() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
       <line x1="16" y1="2" x2="16" y2="6" />
       <line x1="8" y1="2" x2="8" y2="6" />
@@ -22,7 +32,17 @@ function IconCalendar() {
 
 function IconClock() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="9" />
       <polyline points="12 7 12 12 15 15" />
     </svg>
@@ -31,7 +51,17 @@ function IconClock() {
 
 function IconCheck() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );
@@ -39,7 +69,17 @@ function IconCheck() {
 
 function IconInfo() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="10" />
       <line x1="12" y1="8" x2="12" y2="12" />
       <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -54,7 +94,13 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
-function calcularPreview(horaInicio: string, horaFin: string, lapso: number, fechaInicio: string, fechaFin: string) {
+function calcularPreview(
+  horaInicio: string,
+  horaFin: string,
+  lapso: number,
+  fechaInicio: string,
+  fechaFin: string
+) {
   if (!horaInicio || !horaFin || !lapso || !fechaInicio || !fechaFin) return null;
 
   const minInicio = timeToMinutes(horaInicio);
@@ -66,8 +112,17 @@ function calcularPreview(horaInicio: string, horaFin: string, lapso: number, fec
   const slotsPorDia = Math.floor(rangoMin / lapso);
   if (slotsPorDia <= 0) return null;
 
-  const inicio = new Date(fechaInicio + 'T00:00:00');
-  const fin = new Date(fechaFin + 'T00:00:00');
+  const parseLocalDate = (value: string | Date): Date => {
+    if (value instanceof Date) {
+      return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value);
+    if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return new Date(value);
+  };
+
+  const inicio = parseLocalDate(fechaInicio);
+  const fin = parseLocalDate(fechaFin);
   const diffMs = fin.getTime() - inicio.getTime();
   const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 
@@ -75,7 +130,6 @@ function calcularPreview(horaInicio: string, horaFin: string, lapso: number, fec
 
   return { slotsPorDia, dias, totalSlots: slotsPorDia * dias };
 }
-
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -181,7 +235,9 @@ export default function ProfesionalHorariosPage() {
         <Navbar />
         <main className="flex-1 px-4 py-12 max-w-6xl mx-auto w-full">
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-8 text-center">
-            <p className="text-yellow-600 dark:text-yellow-400 font-semibold">Necesitas iniciar sesión</p>
+            <p className="text-yellow-600 dark:text-yellow-400 font-semibold">
+              Necesitas iniciar sesión
+            </p>
           </div>
         </main>
       </>
@@ -211,7 +267,9 @@ export default function ProfesionalHorariosPage() {
             <div className="p-2 rounded-xl bg-[var(--primary)]/10 text-[var(--primary)]">
               <IconCalendar />
             </div>
-            <h1 className="text-3xl font-bold text-[var(--text-primary)]">Gestionar Disponibilidad</h1>
+            <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+              Gestionar Disponibilidad
+            </h1>
           </div>
           <p className="text-[var(--text-muted)] ml-14">
             Generá turnos disponibles para que los clientes puedan reservar
@@ -238,7 +296,6 @@ export default function ProfesionalHorariosPage() {
         {/* Form card */}
         <form onSubmit={handleSubmit} noValidate>
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-8 shadow-sm space-y-7">
-
             {/* Servicio selector */}
             <div>
               <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
@@ -251,7 +308,11 @@ export default function ProfesionalHorariosPage() {
                   value={servicioId}
                   onChange={(e) => {
                     setServicioId(e.target.value);
-                    setFormErrors((p) => { const n = { ...p }; delete n.servicio; return n; });
+                    setFormErrors((p) => {
+                      const n = { ...p };
+                      delete n.servicio;
+                      return n;
+                    });
                   }}
                   className={`w-full px-4 py-2.5 rounded-lg border transition-all text-[var(--text-primary)] bg-[var(--bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 cursor-pointer ${
                     formErrors.servicio ? 'border-red-500' : 'border-[var(--border)]'
@@ -260,7 +321,8 @@ export default function ProfesionalHorariosPage() {
                   <option value="">— Seleccionar servicio —</option>
                   {servicios.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.nombre} ({s.duracionMinutos} min{s.precio != null ? ` · $${Number(s.precio).toFixed(2)}` : ''})
+                      {s.nombre} ({s.duracionMinutos} min
+                      {s.precio != null ? ` · $${Number(s.precio).toFixed(2)}` : ''})
                     </option>
                   ))}
                 </select>
@@ -278,32 +340,46 @@ export default function ProfesionalHorariosPage() {
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">Desde</label>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">
+                    Desde
+                  </label>
                   <input
                     type="date"
                     value={fechaInicio}
                     min={today}
                     onChange={(e) => {
                       setFechaInicio(e.target.value);
-                      setFormErrors((p) => { const n = { ...p }; delete n.fechaInicio; return n; });
+                      setFormErrors((p) => {
+                        const n = { ...p };
+                        delete n.fechaInicio;
+                        return n;
+                      });
                     }}
                     className={`w-full px-4 py-2.5 rounded-lg border transition-all text-[var(--text-primary)] bg-[var(--bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 cursor-pointer ${
                       formErrors.fechaInicio ? 'border-red-500' : 'border-[var(--border)]'
                     }`}
                   />
                   {formErrors.fechaInicio && (
-                    <p className="text-red-500 text-xs mt-1.5 font-medium">{formErrors.fechaInicio}</p>
+                    <p className="text-red-500 text-xs mt-1.5 font-medium">
+                      {formErrors.fechaInicio}
+                    </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">Hasta</label>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">
+                    Hasta
+                  </label>
                   <input
                     type="date"
                     value={fechaFin}
                     min={fechaInicio || today}
                     onChange={(e) => {
                       setFechaFin(e.target.value);
-                      setFormErrors((p) => { const n = { ...p }; delete n.fechaFin; return n; });
+                      setFormErrors((p) => {
+                        const n = { ...p };
+                        delete n.fechaFin;
+                        return n;
+                      });
                     }}
                     className={`w-full px-4 py-2.5 rounded-lg border transition-all text-[var(--text-primary)] bg-[var(--bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 cursor-pointer ${
                       formErrors.fechaFin ? 'border-red-500' : 'border-[var(--border)]'
@@ -324,30 +400,45 @@ export default function ProfesionalHorariosPage() {
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">Hora inicio</label>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">
+                    Hora inicio
+                  </label>
                   <input
                     type="time"
                     value={horaInicio}
                     onChange={(e) => {
                       setHoraInicio(e.target.value);
-                      setFormErrors((p) => { const n = { ...p }; delete n.horaInicio; delete n.horaFin; return n; });
+                      setFormErrors((p) => {
+                        const n = { ...p };
+                        delete n.horaInicio;
+                        delete n.horaFin;
+                        return n;
+                      });
                     }}
                     className={`w-full px-4 py-2.5 rounded-lg border transition-all text-[var(--text-primary)] bg-[var(--bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 cursor-pointer ${
                       formErrors.horaInicio ? 'border-red-500' : 'border-[var(--border)]'
                     }`}
                   />
                   {formErrors.horaInicio && (
-                    <p className="text-red-500 text-xs mt-1.5 font-medium">{formErrors.horaInicio}</p>
+                    <p className="text-red-500 text-xs mt-1.5 font-medium">
+                      {formErrors.horaInicio}
+                    </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">Hora fin</label>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">
+                    Hora fin
+                  </label>
                   <input
                     type="time"
                     value={horaFin}
                     onChange={(e) => {
                       setHoraFin(e.target.value);
-                      setFormErrors((p) => { const n = { ...p }; delete n.horaFin; return n; });
+                      setFormErrors((p) => {
+                        const n = { ...p };
+                        delete n.horaFin;
+                        return n;
+                      });
                     }}
                     className={`w-full px-4 py-2.5 rounded-lg border transition-all text-[var(--text-primary)] bg-[var(--bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 cursor-pointer ${
                       formErrors.horaFin ? 'border-red-500' : 'border-[var(--border)]'
@@ -366,12 +457,16 @@ export default function ProfesionalHorariosPage() {
                 <p className="text-sm font-semibold text-[var(--primary)] mb-3">Vista previa</p>
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <p className="text-2xl font-bold text-[var(--text-primary)]">{preview.slotsPorDia}</p>
+                    <p className="text-2xl font-bold text-[var(--text-primary)]">
+                      {preview.slotsPorDia}
+                    </p>
                     <p className="text-xs text-[var(--text-muted)] mt-0.5">turnos/día</p>
                   </div>
                   <div className="border-x border-[var(--border)]">
                     <p className="text-2xl font-bold text-[var(--text-primary)]">{preview.dias}</p>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">día{preview.dias !== 1 ? 's' : ''}</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                      día{preview.dias !== 1 ? 's' : ''}
+                    </p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-[var(--primary)]">{preview.totalSlots}</p>
@@ -379,7 +474,8 @@ export default function ProfesionalHorariosPage() {
                   </div>
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mt-3 text-center">
-                  Cada turno dura {lapsoFinal} min (duración del servicio) · de {horaInicio} a {horaFin}
+                  Cada turno dura {lapsoFinal} min (duración del servicio) · de {horaInicio} a{' '}
+                  {horaFin}
                 </p>
               </div>
             )}
@@ -407,8 +503,19 @@ export default function ProfesionalHorariosPage() {
               {loading ? (
                 <>
                   <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                   </svg>
                   Generando turnos...
                 </>

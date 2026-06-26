@@ -29,7 +29,13 @@ export class ServicioController {
         return;
       }
 
-      const servicio = await this.servicioService.crear(profesionalId, nombre, descripcion, duracionMinutos, precio);
+      const servicio = await this.servicioService.crear(
+        profesionalId,
+        nombre,
+        descripcion,
+        duracionMinutos,
+        precio
+      );
       res.status(201).json(servicio);
     } catch (error: any) {
       console.error('Error creando servicio:', error);

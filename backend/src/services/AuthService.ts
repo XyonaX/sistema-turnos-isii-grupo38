@@ -4,45 +4,12 @@ import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/database';
 import { Rol } from '../entities/Rol';
 import { Usuario } from '../entities/Usuario';
+import { Usuario as UsuarioDominio } from '../clases/Usuario';
+import { Rol as RolDominio } from '../clases/Rol';
 
 export class AuthService {
   private usuarioRepo = AppDataSource.getRepository(Usuario);
   private rolRepo = AppDataSource.getRepository(Rol);
-<<<<<<< HEAD
-=======
-
-  // Función para obtener o crear los roles por defecto
-  private async obtenerOCrearRoles() {
-    let clienteRol = await this.rolRepo.findOneBy({ nombre: 'cliente' });
-    if (!clienteRol) {
-      clienteRol = this.rolRepo.create({
-        nombre: 'cliente',
-        descripcion: 'Usuario cliente que reserva turnos',
-      });
-      await this.rolRepo.save(clienteRol);
-    }
-
-    let profesionalRol = await this.rolRepo.findOneBy({ nombre: 'profesional' });
-    if (!profesionalRol) {
-      profesionalRol = this.rolRepo.create({
-        nombre: 'profesional',
-        descripcion: 'Profesional que ofrece servicios',
-      });
-      await this.rolRepo.save(profesionalRol);
-    }
-
-    let adminRol = await this.rolRepo.findOneBy({ nombre: 'admin' });
-    if (!adminRol) {
-      adminRol = this.rolRepo.create({
-        nombre: 'admin',
-        descripcion: 'Administrador del sistema',
-      });
-      await this.rolRepo.save(adminRol);
-    }
-
-    return { clienteRol, profesionalRol, adminRol };
-  }
->>>>>>> lisandro-desarrollo
 
   async register(
     nombre: string,
@@ -50,27 +17,15 @@ export class AuthService {
     password: string,
     rolNombre: string
   ): Promise<{ token: string; user: { id: string; nombre: string; email: string; rol?: string } }> {
-    const existing = await this.usuarioRepo.findOneBy({ email });
+    const normalizedEmail = email.toLowerCase();
+    const existing = await this.usuarioRepo.findOneBy({ email: normalizedEmail });
     if (existing) throw new Error('El correo ya está registrado');
 
-<<<<<<< HEAD
     const rol = await this.rolRepo.findOneBy({ nombre: rolNombre });
     if (!rol) throw new Error(`Rol "${rolNombre}" no encontrado`);
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const usuario = this.usuarioRepo.create({ nombre, email, passwordHash, rol });
-=======
-    // Obtener o crear los roles por defecto
-    const { clienteRol } = await this.obtenerOCrearRoles();
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const usuario = this.usuarioRepo.create({
-      nombre,
-      email,
-      passwordHash,
-      rol: clienteRol, // Asignar rol cliente por defecto
-    });
->>>>>>> lisandro-desarrollo
+    const usuario = this.usuarioRepo.create({ nombre, email: normalizedEmail, passwordHash, rol });
     const savedUsuario = await this.usuarioRepo.save(usuario);
 
     const usuarioConRol = await this.usuarioRepo.findOne({
@@ -107,15 +62,28 @@ export class AuthService {
   ): Promise<{ token: string; user: { id: string; nombre: string; email: string; rol?: string } }> {
     // addSelect needed because passwordHash has select: false
     //Validar que el usuario existe y comparar contraseña
+    const normalizedEmail = email.toLowerCase();
     const usuario = await this.usuarioRepo
       .createQueryBuilder('usuario')
       .addSelect('usuario.passwordHash')
       .leftJoinAndSelect('usuario.rol', 'rol')
-      .where('usuario.email = :email', { email })
+      .where('usuario.email = :email', { email: normalizedEmail })
       .getOne();
 
     if (!usuario) throw new Error('Credenciales inválidas');
-    const valid = await bcrypt.compare(password, usuario.passwordHash);
+    const rolDominio = new RolDominio(
+      usuario.rol?.nombre || '',
+      usuario.rol?.descripcion || '',
+      usuario.rol?.id
+    );
+    const usuarioDominio = new UsuarioDominio(
+      usuario.nombre,
+      usuario.email,
+      usuario.passwordHash,
+      rolDominio,
+      usuario.id
+    );
+    const valid = await usuarioDominio.verificarContrasenia(password);
     if (!valid) throw new Error('Credenciales inválidas');
 
     const rolNombre = usuario.rol?.nombre;

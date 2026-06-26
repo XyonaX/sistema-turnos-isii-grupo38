@@ -58,7 +58,12 @@ export interface FranjaHoraria {
   };
 }
 
-export type EstadoTurnoNombre = 'Pendiente' | 'Confirmado' | 'Cancelado' | 'Completado' | 'No asistió';
+export type EstadoTurnoNombre =
+  | 'Pendiente'
+  | 'Confirmado'
+  | 'Cancelado'
+  | 'Completado'
+  | 'No asistió';
 
 export interface Turno {
   id: string;
@@ -67,6 +72,9 @@ export interface Turno {
   estadoTurno: { id: string; nombre: EstadoTurnoNombre };
   notas?: string;
   creadoEn: string | Date;
+  franjaFecha?: string;
+  franjaHoraInicio?: string;
+  franjaHoraFin?: string;
 }
 
 export interface AuthResponse {

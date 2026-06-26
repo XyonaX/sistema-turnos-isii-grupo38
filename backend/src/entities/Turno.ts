@@ -10,8 +10,8 @@ import {
 } from 'typeorm';
 import { Usuario } from './Usuario';
 import { FranjaHoraria } from './FranjaHoraria';
-import { Notificacion } from './Notificacion';
 import { EstadoTurno } from './EstadoTurno';
+import { Notificacion } from './Notificacion';
 
 @Entity('turnos')
 export class Turno {
@@ -29,6 +29,18 @@ export class Turno {
   @ManyToOne(() => EstadoTurno, (et) => et.turnos, { eager: false, nullable: false })
   @JoinColumn({ name: 'estadoTurnoId' })
   estadoTurno!: EstadoTurno;
+
+  @Column({ type: 'boolean', default: true })
+  pagoPendiente!: boolean;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  franjaFecha?: string;
+
+  @Column({ type: 'varchar', length: 8, nullable: true })
+  franjaHoraInicio?: string;
+
+  @Column({ type: 'varchar', length: 8, nullable: true })
+  franjaHoraFin?: string;
 
   @Column({ type: 'text', nullable: true })
   notas?: string;

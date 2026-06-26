@@ -1,45 +1,41 @@
 'use client';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
 import { Navbar } from '../../components/Navbar';
 import { TurnoCard } from '../../components/TurnoCard';
-import { turnoService } from '../../services/turnoService';
 import { useAuth } from '../../context/AuthContext';
-import { Turno } from '../../types';
+import { turnoService } from '../../services/turnoService';
+import type { Turno } from '../../types';
 
 export default function MisTurnosPage() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
-  const [mounted, setMounted] = useState(false);
+  const { isAuthenticated, user, isLoading } = useAuth();
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
+    if (isLoading) return;
 
     if (!isAuthenticated) {
       router.replace('/login');
       return;
     }
 
-    if (user?.rol === 'profesional') {
+    if (user?.rol?.toLowerCase() === 'profesional') {
       router.replace('/profesional/dashboard');
       return;
     }
 
-    if (user?.rol === 'admin') {
+    if (user?.rol?.toLowerCase() === 'admin') {
       router.replace('/admin');
       return;
     }
 
     cargarTurnos();
-  }, [mounted, isAuthenticated, user]);
+  }, [isLoading, isAuthenticated, user]);
 
   const cargarTurnos = async () => {
     try {
@@ -60,7 +56,9 @@ export default function MisTurnosPage() {
       setError(null);
       setSuccess(null);
       await turnoService.cancelar(id);
-      setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, estadoTurno: { id: '', nombre: 'Cancelado' } } : t)));
+      setTurnos((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, estadoTurno: { id: '', nombre: 'Cancelado' } } : t))
+      );
       setSuccess('Turno cancelado correctamente');
     } catch (err) {
       const error = err as any;
@@ -69,12 +67,11 @@ export default function MisTurnosPage() {
     }
   };
 
-  // Mientras se resuelve auth/rol, no renderizar nada
-  if (!mounted || !isAuthenticated || (user?.rol && user.rol !== 'cliente')) {
-    return null;
-  }
+  if (isLoading) return null;
+  if (!isAuthenticated) return null;
+  if (user?.rol?.toLowerCase() === 'profesional') return null;
+  if (user?.rol?.toLowerCase() === 'admin') return null;
 
-  // Separar turnos activos y cancelados
   const turnosActivos = turnos.filter((t) => t.estadoTurno?.nombre !== 'Cancelado');
   const turnosCancelados = turnos.filter((t) => t.estadoTurno?.nombre === 'Cancelado');
 
@@ -82,7 +79,6 @@ export default function MisTurnosPage() {
     <div className="flex flex-col min-h-screen bg-[var(--bg)]">
       <Navbar />
       <main className="flex-1 px-4 py-12 max-w-4xl mx-auto w-full">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">Mis turnos</h1>
           <p className="text-[var(--text-muted)]">
@@ -92,7 +88,6 @@ export default function MisTurnosPage() {
           </p>
         </div>
 
-        {/* Messages */}
         {error && (
           <div className="mb-6 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-sm font-medium">
             {error}
@@ -104,7 +99,6 @@ export default function MisTurnosPage() {
           </div>
         )}
 
-        {/* Content */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="animate-spin mb-4">
@@ -161,7 +155,6 @@ export default function MisTurnosPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Turnos Activos */}
             {turnosActivos.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
@@ -182,7 +175,6 @@ export default function MisTurnosPage() {
               </div>
             )}
 
-            {/* Turnos Cancelados */}
             {turnosCancelados.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-[var(--text-muted)] mb-4 flex items-center gap-2">

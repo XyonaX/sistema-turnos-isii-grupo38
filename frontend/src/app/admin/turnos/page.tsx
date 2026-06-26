@@ -144,10 +144,8 @@ export default function AdminTurnosPage() {
                     >
                       <td className="px-6 py-4 text-sm">
                         <span className="font-medium text-[var(--text-primary)]">
-                          {t.franja?.horario?.fecha
-                            ? new Date(t.franja.horario.fecha + 'T00:00:00').toLocaleDateString(
-                                'es-ES'
-                              )
+                          {t.franja?.fecha
+                            ? parseLocalDate(t.franja.fecha).toLocaleDateString('es-ES')
                             : '—'}
                         </span>
                       </td>

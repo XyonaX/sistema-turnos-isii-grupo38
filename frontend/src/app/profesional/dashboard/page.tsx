@@ -43,7 +43,9 @@ export default function ProfesionalDashboardPage() {
 
       const hoy = new Date().toISOString().split('T')[0];
       const turnosHoy = turnos.filter((t: any) => t.franja?.fecha === hoy).length;
-      const turnosPendientes = turnos.filter((t: any) => t.estadoTurno?.nombre === 'Pendiente').length;
+      const turnosPendientes = turnos.filter(
+        (t: any) => t.estadoTurno?.nombre === 'Pendiente'
+      ).length;
 
       setStats({
         turnosTotal: turnos.length,

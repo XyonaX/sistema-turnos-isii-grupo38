@@ -53,8 +53,8 @@ function IconUser() {
 type FiltroVista = 'todos' | 'disponible' | 'reservado' | 'cancelado';
 
 function getEstadoSlot(franja: FranjaHoraria): 'disponible' | 'reservado' | 'cancelado' {
-  if (franja.estadoFranja?.nombre === 'Libre') return 'disponible';
   if (franja.turno?.estadoTurno?.nombre === 'Cancelado') return 'cancelado';
+  if (franja.estadoFranja?.nombre === 'Libre') return 'disponible';
   return 'reservado';
 }
 
@@ -68,9 +68,11 @@ const ESTADO_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 function SlotBadge({ franja }: { franja: FranjaHoraria }) {
-  const key = franja.estadoFranja?.nombre === 'Libre'
-    ? 'disponible'
-    : (franja.turno?.estadoTurno?.nombre?.toLowerCase() ?? 'reservado');
+  const key = franja.turno?.estadoTurno?.nombre === 'Cancelado'
+    ? 'cancelado'
+    : franja.estadoFranja?.nombre === 'Libre'
+      ? 'disponible'
+      : (franja.turno?.estadoTurno?.nombre?.toLowerCase() ?? 'reservado');
   const cfg = ESTADO_BADGE[key] ?? {
     label: key,
     className: 'bg-gray-100 text-gray-600 border-gray-200',
@@ -83,7 +85,14 @@ function SlotBadge({ franja }: { franja: FranjaHoraria }) {
     </span>
   );
 }
-
+function parseLocalDate(value: string | Date): Date {
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+  const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value);
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return new Date(value);
+}
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProfesionalTurnosPage() {
@@ -295,7 +304,7 @@ export default function ProfesionalTurnosPage() {
               const items = porFecha[fecha];
               const fechaLabel =
                 fecha !== 'sin-fecha'
-                  ? new Date(fecha + 'T00:00:00').toLocaleDateString('es-AR', {
+                  ? parseLocalDate(fecha).toLocaleDateString('es-AR', {
                       weekday: 'long',
                       day: 'numeric',
                       month: 'long',

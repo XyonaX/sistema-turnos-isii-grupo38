@@ -1,16 +1,40 @@
 'use client';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { Navbar } from '../../../components/Navbar';
 import { useAuth } from '../../../context/AuthContext';
 import api from '../../../services/api';
-import type { Horario } from '../../../types';
+
+// Interfaz del Slot que viene del backend
+interface FranjaHorariaSlot {
+  id: string;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  motivoBloqueo?: string;
+  estadoFranja?: {
+    id: string;
+    nombre: string;
+  };
+}
+
+// Interfaz para poder listar los servicios en el menú desplegable
+interface ServicioItem {
+  id: string;
+  nombre: string;
+  profesional?: {
+    nombre: string;
+  };
+}
 
 export default function AdminHorariosPage() {
-  const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
-  const [horarios, setHorarios] = useState<Horario[]>([]);
+  const auth = useAuth();
+  const { isAuthenticated, user } = auth;
+  const isLoading = (auth as any).isLoading ?? false;
+
+  const [horarios, setHorarios] = useState<FranjaHorariaSlot[]>([]);
+  const [servicios, setServicios] = useState<ServicioItem[]>([]); // Nuevo estado para los servicios
+  const [servicioId, setServicioId] = useState(''); // Nuevo estado para el servicio seleccionado
   const [fecha, setFecha] = useState('');
   const [horaInicio, setHoraInicio] = useState('');
   const [horaFin, setHoraFin] = useState('');
@@ -19,120 +43,103 @@ export default function AdminHorariosPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [cargandoHorarios, setCargandoHorarios] = useState(true);
-  const [mounted, setMounted] = useState(false);
 
-  // Efecto para verificar autenticación
   useEffect(() => {
-    setMounted(true);
-    // No redirigir, dejar que el usuario vea el mensaje
-  }, []);
+    if (isLoading) return;
+    if (!isAuthenticated) return;
+    if (user?.rol?.toLowerCase() !== 'admin') return;
+    cargarDatos();
+  }, [isLoading, isAuthenticated, user]);
 
-  const cargar = async () => {
+  const cargarDatos = async () => {
     try {
       setCargandoHorarios(true);
-      const { data } = await api.get<Horario[]>('/horarios');
-      // Obtener todos los horarios, incluyendo bloqueados
-      const todosHorarios = Array.isArray(data) ? data : [];
-      setHorarios(todosHorarios);
+      setError(null);
+
+      // Traemos las franjas horarias y los servicios en paralelo para mejorar el rendimiento
+      const [horariosRes, serviciosRes] = await Promise.all([
+        api.get<FranjaHorariaSlot[]>('/horarios'),
+        api.get<ServicioItem[]>('/servicios'),
+      ]);
+
+      setHorarios(Array.isArray(horariosRes.data) ? horariosRes.data : []);
+      setServicios(Array.isArray(serviciosRes.data) ? serviciosRes.data : []);
     } catch (err) {
-      console.error('Error cargando horarios:', err);
-      // No mostrar error, solo dejar lista vacía
+      console.error('Error cargando datos del panel:', err);
+      setError('No se pudieron sincronizar los datos con el servidor.');
     } finally {
       setCargandoHorarios(false);
     }
   };
 
-  useEffect(() => {
-    if (mounted && isAuthenticated) {
-      cargar();
-    }
-  }, [mounted, isAuthenticated]);
-
   const validarFormulario = (): boolean => {
     const errors: Record<string, string> = {};
 
+    if (!servicioId) {
+      errors.servicioId = 'Debes seleccionar un servicio para este horario';
+    }
     if (!fecha) {
       errors.fecha = 'La fecha es requerida';
     } else {
-      const fechaSeleccionada = new Date(fecha);
+      const [year, month, day] = fecha.split('-').map(Number);
+      const fechaSeleccionada = new Date(year, month - 1, day);
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
-
-      if (fechaSeleccionada < hoy) {
-        errors.fecha = 'No puedes seleccionar una fecha en el pasado';
-      }
+      if (fechaSeleccionada < hoy) errors.fecha = 'No puedes seleccionar una fecha en el pasado';
     }
-
-    if (!horaInicio) {
-      errors.horaInicio = 'La hora de inicio es requerida';
-    }
-
-    if (!horaFin) {
-      errors.horaFin = 'La hora de fin es requerida';
-    }
-
+    if (!horaInicio) errors.horaInicio = 'La hora de inicio es requerida';
+    if (!horaFin) errors.horaFin = 'La hora de fin es requerida';
     if (horaInicio && horaFin && horaInicio >= horaFin) {
       errors.horaFin = 'La hora de fin debe ser mayor a la hora de inicio';
     }
-
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const crear = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validarFormulario()) {
-      return;
-    }
-
+    if (!validarFormulario()) return;
     setLoading(true);
     setError(null);
     setSuccess(null);
-
     try {
+      // Mandamos el ID seleccionado dinámicamente desde el componente select
       await api.post('/horarios', {
+        servicioId,
         fechaInicio: fecha,
         fechaFin: fecha,
         horaInicio,
         horaFin,
       });
 
+      setServicioId('');
       setFecha('');
       setHoraInicio('');
       setHoraFin('');
       setFormErrors({});
       setSuccess('✓ Horarios creados correctamente');
-
       setTimeout(() => {
-        cargar();
+        cargarDatos();
         setSuccess(null);
       }, 1500);
     } catch (err: any) {
-      console.error('Error creando horario:', err);
-      const mensajeError =
-        err.response?.data?.message || err.message || 'No se pudo crear los horarios';
-      setError(mensajeError);
+      setError(err.response?.data?.message || err.message || 'No se pudo crear los horarios');
     } finally {
       setLoading(false);
     }
   };
 
   const cancelar = async (id: string) => {
-    if (!confirm('¿Estás seguro de que quieres cancelar este horario?')) {
-      return;
-    }
-
+    if (!confirm('¿Estás seguro de que quieres cancelar este horario?')) return;
     try {
       setError(null);
       await api.delete(`/horarios/${id}`);
       setSuccess('✓ Horario cancelado correctamente');
       setTimeout(() => {
-        cargar();
+        cargarDatos();
         setSuccess(null);
       }, 1000);
     } catch (err: any) {
-      console.error('Error cancelando horario:', err);
       setError('No se pudo cancelar el horario');
     }
   };
@@ -141,18 +148,17 @@ export default function AdminHorariosPage() {
     try {
       setError(null);
       await api.patch(`/horarios/${id}/toggle`);
-      cargar();
+      cargarDatos();
     } catch (err) {
-      console.error('Error actualizando horario:', err);
       setError('No se pudo actualizar el horario');
     }
   };
 
-  // Obtener la fecha mínima (hoy)
   const hoy = new Date().toISOString().split('T')[0];
 
-  // Si no está autenticado, mostrar mensaje
-  if (!mounted || !isAuthenticated) {
+  if (isLoading) return null;
+
+  if (!isAuthenticated) {
     return (
       <>
         <Navbar />
@@ -167,8 +173,7 @@ export default function AdminHorariosPage() {
     );
   }
 
-  // Si no es admin, mostrar mensaje
-  if (user?.rol !== 'admin') {
+  if (user?.rol?.toLowerCase() !== 'admin') {
     return (
       <>
         <Navbar />
@@ -178,9 +183,6 @@ export default function AdminHorariosPage() {
             <p className="text-red-600 dark:text-red-400 font-semibold text-lg">Acceso denegado</p>
             <p className="text-red-600/70 dark:text-red-400/70 mt-2">
               Solo los administradores pueden acceder a este panel
-            </p>
-            <p className="text-red-600/50 dark:text-red-400/50 text-sm mt-4">
-              Tu rol actual: <strong>{user?.rol || 'desconocido'}</strong>
             </p>
           </div>
         </main>
@@ -213,7 +215,6 @@ export default function AdminHorariosPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Formulario */}
           <div className="lg:col-span-1">
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 sticky top-4 shadow-lg">
               <div className="mb-6">
@@ -226,7 +227,38 @@ export default function AdminHorariosPage() {
               </div>
 
               <form onSubmit={crear} className="space-y-5">
-                {/* Fecha */}
+                {/* SELECTOR DINÁMICO DE SERVICIOS */}
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+                    💼 Asignar al Servicio
+                  </label>
+                  <select
+                    value={servicioId}
+                    required
+                    onChange={(e) => {
+                      setServicioId(e.target.value);
+                      setFormErrors((p) => {
+                        const n = { ...p };
+                        delete n.servicioId;
+                        return n;
+                      });
+                    }}
+                    className={`w-full px-4 py-3 rounded-lg border transition-all ${formErrors.servicioId ? 'border-red-500 bg-red-500/5' : 'border-[var(--border)] bg-[var(--bg)]'} text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
+                  >
+                    <option value="">Selecciona un servicio...</option>
+                    {servicios.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nombre} {s.profesional ? `(${s.profesional.nombre})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.servicioId && (
+                    <p className="text-red-500 text-xs mt-1.5 font-medium">
+                      {formErrors.servicioId}
+                    </p>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
                     📅 Fecha
@@ -234,28 +266,23 @@ export default function AdminHorariosPage() {
                   <input
                     type="date"
                     value={fecha}
-                    onChange={(e) => {
-                      setFecha(e.target.value);
-                      setFormErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors.fecha;
-                        return newErrors;
-                      });
-                    }}
                     min={hoy}
                     required
-                    className={`w-full px-4 py-3 rounded-lg border transition-all ${
-                      formErrors.fecha
-                        ? 'border-red-500 bg-red-500/5 focus:ring-red-500/30'
-                        : 'border-[var(--border)] bg-[var(--bg)] focus:ring-blue-500/30'
-                    } text-[var(--text-primary)] focus:outline-none focus:ring-2`}
+                    onChange={(e) => {
+                      setFecha(e.target.value);
+                      setFormErrors((p) => {
+                        const n = { ...p };
+                        delete n.fecha;
+                        return n;
+                      });
+                    }}
+                    className={`w-full px-4 py-3 rounded-lg border transition-all ${formErrors.fecha ? 'border-red-500 bg-red-500/5' : 'border-[var(--border)] bg-[var(--bg)]'} text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
                   />
                   {formErrors.fecha && (
                     <p className="text-red-500 text-xs mt-1.5 font-medium">{formErrors.fecha}</p>
                   )}
                 </div>
 
-                {/* Hora Inicio */}
                 <div>
                   <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
                     🕐 Hora de inicio
@@ -263,25 +290,21 @@ export default function AdminHorariosPage() {
                   <input
                     type="time"
                     value={horaInicio}
+                    required
                     onChange={(e) => {
                       setHoraInicio(e.target.value);
-                      setFormErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors.horaInicio;
+                      setFormErrors((p) => {
+                        const n = { ...p };
+                        delete n.horaInicio;
                         if (horaFin && e.target.value >= horaFin) {
-                          newErrors.horaFin = 'La hora de fin debe ser mayor a la de inicio';
+                          n.horaFin = 'La hora de fin debe ser mayor';
                         } else {
-                          delete newErrors.horaFin;
+                          delete n.horaFin;
                         }
-                        return newErrors;
+                        return n;
                       });
                     }}
-                    required
-                    className={`w-full px-4 py-3 rounded-lg border transition-all ${
-                      formErrors.horaInicio
-                        ? 'border-red-500 bg-red-500/5 focus:ring-red-500/30'
-                        : 'border-[var(--border)] bg-[var(--bg)] focus:ring-blue-500/30'
-                    } text-[var(--text-primary)] focus:outline-none focus:ring-2`}
+                    className={`w-full px-4 py-3 rounded-lg border transition-all ${formErrors.horaInicio ? 'border-red-500 bg-red-500/5' : 'border-[var(--border)] bg-[var(--bg)]'} text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
                   />
                   {formErrors.horaInicio && (
                     <p className="text-red-500 text-xs mt-1.5 font-medium">
@@ -290,7 +313,6 @@ export default function AdminHorariosPage() {
                   )}
                 </div>
 
-                {/* Hora Fin */}
                 <div>
                   <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
                     🕑 Hora de fin
@@ -298,30 +320,25 @@ export default function AdminHorariosPage() {
                   <input
                     type="time"
                     value={horaFin}
+                    required
                     onChange={(e) => {
                       setHoraFin(e.target.value);
-                      setFormErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors.horaFin;
+                      setFormErrors((p) => {
+                        const n = { ...p };
+                        delete n.horaFin;
                         if (horaInicio && e.target.value <= horaInicio) {
-                          newErrors.horaFin = 'La hora de fin debe ser mayor a la de inicio';
+                          n.horaFin = 'La hora de fin debe ser mayor';
                         }
-                        return newErrors;
+                        return n;
                       });
                     }}
-                    required
-                    className={`w-full px-4 py-3 rounded-lg border transition-all ${
-                      formErrors.horaFin
-                        ? 'border-red-500 bg-red-500/5 focus:ring-red-500/30'
-                        : 'border-[var(--border)] bg-[var(--bg)] focus:ring-blue-500/30'
-                    } text-[var(--text-primary)] focus:outline-none focus:ring-2`}
+                    className={`w-full px-4 py-3 rounded-lg border transition-all ${formErrors.horaFin ? 'border-red-500 bg-red-500/5' : 'border-[var(--border)] bg-[var(--bg)]'} text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
                   />
                   {formErrors.horaFin && (
                     <p className="text-red-500 text-xs mt-1.5 font-medium">{formErrors.horaFin}</p>
                   )}
                 </div>
 
-                {/* Preview de slots */}
                 {fecha && horaInicio && horaFin && horaInicio < horaFin && (
                   <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 mt-4">
                     <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2">
@@ -333,8 +350,7 @@ export default function AdminHorariosPage() {
                         let current = horaInicio;
                         while (current < horaFin) {
                           const [h, m] = current.split(':').map(Number);
-                          const nextH = h + 1;
-                          const next = `${String(nextH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                          const next = `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                           slots.push(`${current}-${next}`);
                           current = next;
                         }
@@ -365,16 +381,14 @@ export default function AdminHorariosPage() {
                   </div>
                 )}
 
-                {/* Botón submit */}
                 <button
                   type="submit"
-                  disabled={loading || !validarFormulario()}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold rounded-lg transition-all shadow-md hover:shadow-lg disabled:shadow-none disabled:cursor-not-allowed mt-6"
+                  disabled={loading}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold rounded-lg transition-all shadow-md mt-6 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
-                      <span className="inline-block animate-spin">⏳</span>
-                      Creando...
+                      <span className="inline-block animate-spin">⏳</span>Creando...
                     </span>
                   ) : (
                     '✓ Crear horarios'
@@ -384,7 +398,6 @@ export default function AdminHorariosPage() {
             </div>
           </div>
 
-          {/* Lista de horarios */}
           <div className="lg:col-span-2">
             <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6">
               📋 Horarios creados
@@ -428,10 +441,9 @@ export default function AdminHorariosPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {/* Agrupar por fecha */}
                 {Object.entries(
-                  horarios.reduce((acc: Record<string, Horario[]>, h) => {
-                    const fechaKey = h.horario?.fecha ?? '';
+                  horarios.reduce((acc: Record<string, FranjaHorariaSlot[]>, h) => {
+                    const fechaKey = h.fecha ?? '';
                     if (!fechaKey) return acc;
                     if (!acc[fechaKey]) acc[fechaKey] = [];
                     acc[fechaKey].push(h);
@@ -440,15 +452,17 @@ export default function AdminHorariosPage() {
                 )
                   .sort()
                   .map(([fechaStr, horas]) => {
-                    const fecha = new Date(fechaStr);
-                    const diaNum = fecha.getDate();
-                    const mes = fecha.toLocaleDateString('es-ES', { month: 'short' });
-                    const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'long' });
+                    const [year, month, day] = fechaStr.split('-').map(Number);
+                    const fechaObj = new Date(year, month - 1, day);
+
+                    const diaNum = fechaObj.getDate();
+                    const mes = fechaObj.toLocaleDateString('es-ES', { month: 'short' });
+                    const diaSemana = fechaObj.toLocaleDateString('es-ES', { weekday: 'long' });
 
                     return (
                       <div key={fechaStr} className="mb-6">
                         <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-3">
-                          {fecha.toLocaleDateString('es-ES', {
+                          {fechaObj.toLocaleDateString('es-ES', {
                             weekday: 'long',
                             day: 'numeric',
                             month: 'long',
@@ -459,7 +473,7 @@ export default function AdminHorariosPage() {
                           {horas.map((h) => (
                             <div
                               key={h.id}
-                              className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-shadow group"
+                              className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-shadow"
                             >
                               <div className="flex items-center gap-4 flex-1">
                                 <div className="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg p-3 text-white text-center min-w-[70px]">
@@ -479,12 +493,14 @@ export default function AdminHorariosPage() {
                                 <button
                                   onClick={() => toggle(h.id)}
                                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                    h.estado === 'LIBRE'
+                                    h.estadoFranja?.nombre === 'Libre'
                                       ? 'bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-600 dark:text-green-400'
                                       : 'bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400'
                                   }`}
                                 >
-                                  {h.estado === 'LIBRE' ? '✓ Disponible' : '⏸ Bloqueado'}
+                                  {h.estadoFranja?.nombre === 'Libre'
+                                    ? '✓ Disponible'
+                                    : '⏸ Bloqueado'}
                                 </button>
                                 <button
                                   onClick={() => cancelar(h.id)}

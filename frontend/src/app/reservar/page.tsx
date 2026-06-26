@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 
+import { ModalPago } from '../../components/ModalPago';
 import { Navbar } from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -103,8 +104,21 @@ function IconCheck() {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function parseLocalDate(fecha: string | Date): Date {
+  if (fecha instanceof Date) {
+    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+  }
+
+  const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(fecha);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+
+  return new Date(fecha);
+}
+
 function formatFechaLarga(fecha: string): string {
-  return new Date(fecha + 'T00:00:00').toLocaleDateString('es-AR', {
+  return parseLocalDate(fecha).toLocaleDateString('es-AR', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -112,7 +126,7 @@ function formatFechaLarga(fecha: string): string {
 }
 
 function formatFechaCorta(fecha: string): string {
-  const d = new Date(fecha + 'T00:00:00');
+  const d = parseLocalDate(fecha);
   return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
 }
 
@@ -245,6 +259,16 @@ export default function ReservarPage() {
   const [reservando, setReservando] = useState(false);
   const [reservaExitosa, setReservaExitosa] = useState<string | null>(null);
 
+  // Pago
+  const [pagoSesion, setPagoSesion] = useState<{
+    pagoId: string;
+    plazoExpiracion: Date;
+    turnoId: string;
+    monto?: number;
+    servicioNombre?: string;
+  } | null>(null);
+  const [pagoExpirado, setPagoExpirado] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -309,19 +333,47 @@ export default function ReservarPage() {
     if (!franjaModal) return;
     setReservando(true);
     try {
-      await api.post('/turnos', { franjaId: franjaModal.id, notas: notas || undefined });
-      setReservaExitosa(
-        `Turno reservado para el ${formatFechaLarga(franjaModal.fecha ?? '')} a las ${franjaModal.horaInicio}`
-      );
+      const { data } = await api.post('/turnos', {
+        franjaId: franjaModal.id,
+        notas: notas || undefined,
+      });
+      // Cerrar modal de confirmación y abrir modal de pago
       setFranjaModal(null);
-      // Recargar para quitar la franja reservada
-      await cargarFranjas();
+      const servicio = data.turno?.franja?.horario?.servicio;
+      setPagoSesion({
+        pagoId: data.pagoId,
+        plazoExpiracion: new Date(data.plazoExpiracion),
+        turnoId: data.turno.id,
+        monto: servicio?.precio,
+        servicioNombre: servicio?.nombre,
+      });
     } catch (err: any) {
       setError(err.response?.data?.message || 'No se pudo realizar la reserva');
       setFranjaModal(null);
     } finally {
       setReservando(false);
     }
+  };
+
+  const handlePagoExitoso = async (_turno: any) => {
+    setPagoSesion(null);
+    setReservaExitosa('Turno confirmado exitosamente');
+    await cargarFranjas();
+  };
+
+  const handlePagoCancelado = async () => {
+    setPagoSesion(null);
+    setReservaExitosa(null);
+    setPagoExpirado(false);
+    setError('Reserva cancelada. La franja vuelve a estar disponible.');
+    await cargarFranjas();
+  };
+
+  const handlePagoExpirado = async () => {
+    setPagoSesion(null);
+    setReservaExitosa(null);
+    setPagoExpirado(true);
+    await cargarFranjas();
   };
 
   // Guard: no renderizar hasta resolver auth
@@ -344,6 +396,19 @@ export default function ReservarPage() {
           onConfirm={handleReservar}
           onClose={() => setFranjaModal(null)}
           loading={reservando}
+        />
+      )}
+
+      {pagoSesion && (
+        <ModalPago
+          pagoId={pagoSesion.pagoId}
+          plazoExpiracion={pagoSesion.plazoExpiracion}
+          monto={pagoSesion.monto}
+          servicioNombre={pagoSesion.servicioNombre}
+          onPagoExitoso={handlePagoExitoso}
+          onPagoCancelado={handlePagoCancelado}
+          onPagoExpirado={handlePagoExpirado}
+          onClose={() => setPagoSesion(null)}
         />
       )}
 
@@ -375,6 +440,37 @@ export default function ReservarPage() {
             <button
               onClick={() => setReservaExitosa(null)}
               className="ml-auto text-green-600 hover:text-green-800 cursor-pointer text-lg leading-none"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* Pago expirado */}
+        {pagoExpirado && (
+          <div className="mb-6 flex items-start gap-3 px-4 py-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+            <svg
+              className="shrink-0 mt-0.5 w-5 h-5 text-amber-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                Tiempo de pago agotado
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
+                No se completó el pago dentro del plazo. El turno fue cancelado y la franja vuelve a
+                estar disponible.
+              </p>
+            </div>
+            <button
+              onClick={() => setPagoExpirado(false)}
+              className="shrink-0 text-amber-500 hover:text-amber-700 text-lg leading-none cursor-pointer"
             >
               ×
             </button>
@@ -475,10 +571,10 @@ export default function ReservarPage() {
                   <div className="flex items-center gap-2 mb-4">
                     <div className="shrink-0 w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex flex-col items-center justify-center">
                       <span className="text-sm font-bold text-[var(--primary)] leading-none">
-                        {new Date(fecha + 'T00:00:00').getDate()}
+                        {parseLocalDate(fecha).getDate()}
                       </span>
                       <span className="text-[10px] text-[var(--text-muted)] uppercase leading-none mt-0.5">
-                        {new Date(fecha + 'T00:00:00').toLocaleDateString('es-AR', {
+                        {parseLocalDate(fecha).toLocaleDateString('es-AR', {
                           month: 'short',
                         })}
                       </span>
@@ -522,9 +618,7 @@ export default function ReservarPage() {
                               )}
                               {servicio && (
                                 <div className="flex flex-wrap gap-1.5">
-                                  <span
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-[11px] font-medium"
-                                  >
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-[11px] font-medium">
                                     {servicio.nombre}
                                     {servicio.precio != null && (
                                       <span className="text-[var(--text-muted)] font-normal">

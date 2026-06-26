@@ -6,11 +6,11 @@ import { Navbar } from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { turnoService } from '../../services/turnoService';
-import type { Horario } from '../../types';
+import type { FranjaHoraria } from '../../types';
 
 export default function DisponibilidadPage() {
   const { user } = useAuth();
-  const [horarios, setHorarios] = useState<Horario[]>([]);
+  const [horarios, setHorarios] = useState<FranjaHoraria[]>([]);
   const [loading, setLoading] = useState(true);
   const [reservedHorarios, setReservedHorarios] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +31,11 @@ export default function DisponibilidadPage() {
       setLoading(true);
       setError(null);
       const data = await turnoService.getDisponibles();
-      setHorarios(data as Horario[]);
+      setHorarios(data);
 
       // Seleccionar la primera fecha disponible
       if (data.length > 0 && !selectedDate) {
-        setSelectedDate(data[0].horario?.fecha || null);
+        setSelectedDate(data[0].fecha || null);
       }
     } catch (err) {
       setError('No se pudieron cargar los horarios disponibles');
@@ -69,13 +69,22 @@ export default function DisponibilidadPage() {
     }
   };
 
+  const parseLocalDate = (value: string | Date): Date => {
+    if (value instanceof Date) {
+      return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value);
+    if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return new Date(value);
+  };
+
   const validarFormulario = (): boolean => {
     const errors: Record<string, string> = {};
 
     if (!fecha) {
       errors.fecha = 'La fecha es requerida';
     } else {
-      const fechaSeleccionada = new Date(fecha);
+      const fechaSeleccionada = parseLocalDate(fecha);
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
 
@@ -168,7 +177,7 @@ export default function DisponibilidadPage() {
       acc[h.fecha].push(h);
       return acc;
     },
-    {} as Record<string, Horario[]>
+    {} as Record<string, FranjaHoraria[]>
   );
 
   const fechasDisponibles = Object.keys(horariosPorFecha).sort();
@@ -436,7 +445,7 @@ export default function DisponibilidadPage() {
                 <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">📅 Fechas</h2>
                 <div className="space-y-2 max-h-[500px] overflow-y-auto">
                   {fechasDisponibles.map((fecha) => {
-                    const date = new Date(fecha);
+                    const date = parseLocalDate(fecha);
                     const isSelected = selectedDate === fecha;
                     const numHorarios = horariosPorFecha[fecha]?.length || 0;
 
@@ -477,7 +486,7 @@ export default function DisponibilidadPage() {
                 <>
                   <div className="mb-6">
                     <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-                      {new Date(selectedDate).toLocaleDateString('es-ES', {
+                      {parseLocalDate(selectedDate).toLocaleDateString('es-ES', {
                         weekday: 'long',
                         day: 'numeric',
                         month: 'long',

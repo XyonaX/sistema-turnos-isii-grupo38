@@ -13,6 +13,21 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
   // Determina si se puede cancelar (>= 3 hs de anticipación)
+  const parseFecha = (value?: string | Date | null): Date | null => {
+    if (!value) return null;
+    if (value instanceof Date) {
+      return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
+    const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value);
+    if (match) {
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    }
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) return parsed;
+    const parsedAlt = new Date(`${value}T00:00:00`);
+    return !isNaN(parsedAlt.getTime()) ? parsedAlt : null;
+  };
+
   const cancelInfo = React.useMemo(() => {
     if (turno.estadoTurno?.nombre === 'Cancelado' || turno.estadoTurno?.nombre === 'Completado') {
       return { canCancel: false, horasRestantes: 0 };
@@ -22,7 +37,8 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
     if (!fecha || !horaInicio) return { canCancel: false, horasRestantes: 0 };
 
     const [h, m] = horaInicio.split(':').map(Number);
-    const turnoDate = new Date(fecha + 'T00:00:00');
+    const turnoDate = parseFecha(fecha);
+    if (!turnoDate) return { canCancel: false, horasRestantes: 0 };
     turnoDate.setHours(h, m, 0, 0);
     const diffMs = turnoDate.getTime() - Date.now();
     const horasRestantes = Math.max(0, diffMs / (1000 * 60 * 60));
@@ -44,11 +60,13 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
     }
   };
 
-  const fechaStr = turno.franja?.fecha ?? '';
-  const fecha = fechaStr ? new Date(fechaStr + 'T00:00:00') : new Date();
-  const diaNum = fecha.getDate();
-  const mes = fecha.toLocaleDateString('es-ES', { month: 'short' });
-  const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'short' });
+  const fechaStr = turno.franja?.fecha ?? turno.franjaFecha ?? '';
+  const horaInicio = turno.franja?.horaInicio ?? turno.franjaHoraInicio;
+  const horaFin = turno.franja?.horaFin ?? turno.franjaHoraFin;
+  const fecha = parseFecha(fechaStr);
+  const diaNum = fecha ? fecha.getDate() : '—';
+  const mes = fecha ? fecha.toLocaleDateString('es-ES', { month: 'short' }) : '—';
+  const diaSemana = fecha ? fecha.toLocaleDateString('es-ES', { weekday: 'short' }) : '—';
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -115,7 +133,7 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
               />
             </svg>
             <span className="text-lg font-semibold text-[var(--text-primary)]">
-              {turno.franja?.horaInicio ?? '—'} — {turno.franja?.horaFin ?? '—'}
+              {horaInicio ?? '—'} — {horaFin ?? '—'}
             </span>
           </div>
 
@@ -136,32 +154,34 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
         </div>
 
         {/* Botón cancelar */}
-        {turno.estadoTurno?.nombre !== 'Cancelado' && turno.estadoTurno?.nombre !== 'Completado' && onCancelar && (
-          <div className="flex-shrink-0 flex flex-col items-end gap-1">
-            <button
-              onClick={cancelInfo.canCancel ? handleCancelarClick : undefined}
-              disabled={isCanceling || !cancelInfo.canCancel}
-              title={
-                !cancelInfo.canCancel
-                  ? `Solo se puede cancelar con al menos 3 horas de anticipación. Quedan ${cancelInfo.horasRestantes.toFixed(1)}hs.`
-                  : 'Cancelar turno'
-              }
-              className={`px-4 py-2 border font-semibold rounded-lg transition-all
+        {turno.estadoTurno?.nombre !== 'Cancelado' &&
+          turno.estadoTurno?.nombre !== 'Completado' &&
+          onCancelar && (
+            <div className="flex-shrink-0 flex flex-col items-end gap-1">
+              <button
+                onClick={cancelInfo.canCancel ? handleCancelarClick : undefined}
+                disabled={isCanceling || !cancelInfo.canCancel}
+                title={
+                  !cancelInfo.canCancel
+                    ? `Solo se puede cancelar con al menos 3 horas de anticipación. Quedan ${cancelInfo.horasRestantes.toFixed(1)}hs.`
+                    : 'Cancelar turno'
+                }
+                className={`px-4 py-2 border font-semibold rounded-lg transition-all
                 ${
                   cancelInfo.canCancel
                     ? 'bg-red-500/10 hover:bg-red-500/20 border-red-500/30 text-red-600 dark:text-red-400 cursor-pointer'
                     : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400 cursor-not-allowed opacity-60'
                 } disabled:opacity-50`}
-            >
-              {isCanceling ? 'Cancelando...' : 'Cancelar'}
-            </button>
-            {!cancelInfo.canCancel && (
-              <span className="text-[10px] text-[var(--text-muted)] text-right leading-tight max-w-[110px]">
-                Mín. 3hs de anticipación
-              </span>
-            )}
-          </div>
-        )}
+              >
+                {isCanceling ? 'Cancelando...' : 'Cancelar'}
+              </button>
+              {!cancelInfo.canCancel && (
+                <span className="text-[10px] text-[var(--text-muted)] text-right leading-tight max-w-[110px]">
+                  Mín. 3hs de anticipación
+                </span>
+              )}
+            </div>
+          )}
       </div>
 
       {/* Detalles adicionales */}
@@ -200,10 +220,8 @@ export function TurnoCard({ turno, onCancelar }: TurnoCardProps) {
 
             <p className="text-[var(--text-secondary)] mb-6">
               ¿Estás seguro de que deseas cancelar este turno del{' '}
-              <strong>
-                {fechaStr ? new Date(fechaStr + 'T00:00:00').toLocaleDateString('es-ES') : '—'}
-              </strong>{' '}
-              a las <strong>{turno.franja?.horaInicio ?? '—'}</strong>?
+              <strong>{fechaStr ? parseFecha(fechaStr).toLocaleDateString('es-ES') : '—'}</strong> a
+              las <strong>{horaInicio ?? '—'}</strong>?
             </p>
 
             <p className="text-sm text-[var(--text-muted)] mb-6 bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3">
